@@ -7,7 +7,7 @@ int nextPos = 0;
 }
 
 %option noyywrap nounput batch noinput stack
-IDENTIFIER [a-zA-Z][a-zA-Z0-9]*
+IDENTIFIER [a-zA-Z][a-zA-Z0-9_]*
 COMMENT \/\/.*
 INTEGER_LITERAL 0|-?[1-9][0-9]*
 STRING_LITERAL \"[^\"]*\"

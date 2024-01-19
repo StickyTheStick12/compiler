@@ -1,18 +1,18 @@
 %top {
-#include <stdio.h>
+#include "stdlib.h"
 int yyError(const char* s);
 int bufferSize = 15;
 char* buffer = NULL;
 int nextPos = 0;
 }
 
-%option noyywrap nounput noinput batch
+%option noyywrap nounput batch noinput stack
 IDENTIFIER [a-zA-Z][a-zA-Z0-9]*
 COMMENT \/\/.*
 INTEGER_LITERAL 0|-?[1-9][0-9]*
+STRING_LITERAL \"[^\"]*\"
 
 %%
-
 "class" {
    printf("CLASS\n");
 }
@@ -141,7 +141,7 @@ INTEGER_LITERAL 0|-?[1-9][0-9]*
    printf("WHILE\n");
 }
 
-"System.out.printLn" {
+"System.out.println" {
    printf("printLN\n");
 }
 
@@ -186,7 +186,7 @@ INTEGER_LITERAL 0|-?[1-9][0-9]*
 
 . {
     if (buffer == NULL)
-        buffer = malloc(15);
+        buffer = (char*)malloc(15);
 
     buffer[nextPos] = yytext[0];
     nextPos++;
@@ -194,7 +194,7 @@ INTEGER_LITERAL 0|-?[1-9][0-9]*
     if (nextPos == bufferSize)
     {
         bufferSize = bufferSize * 2;
-        buffer = realloc(buffer, bufferSize);
+        buffer = (char*)realloc(buffer, bufferSize);
     }
 }
 
@@ -206,10 +206,7 @@ INTEGER_LITERAL 0|-?[1-9][0-9]*
     else
         return 0;
 }
-
-
 %%
-
 int yyError(const char* str) {
    fprintf(stderr, "Unrecognized input: %s\n", str);
    return 0;

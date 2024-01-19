@@ -1,180 +1,176 @@
 %top {
-#include "stdlib.h"
-int yyError(const char* s);
-int bufferSize = 15;
-char* buffer = NULL;
-int nextPos = 0;
+    #include "parser.tab.hh"
+    #define YY_DECL yy::parser::symbol_type yylex()
+    #include "Node.h"
 }
 
-%option yylineno noyywrap nounput batch noinput stack
-IDENTIFIER [a-zA-Z][a-zA-Z0-9]*
-COMMENT \/\/.*
-INTEGER_LITERAL 0|-?[1-9][0-9]*
-STRING_LITERAL \"[^\"]*\"
+%option noyywrap nounput batch noinput stack
+IDENTIFIER [a-zA-Z][a-zA-Z0-9_]*
+INTEGER_LITERAL 0|[1-9][0-9]*
 
 %%
 "class" {
-   printf("CLASS\n");
+   return yy::parser::make_CLASS(yytext);
 }
 
 "{" {
-   printf("LBRACE\n");
+   return yy::parser::make_LBRACE(yytext);
 }
 
 "}" {
-   printf("RBRACE\n");
+   return yy::parser::make_RBRACE(yytext);
 }
 
 "(" {
-   printf("LPAR\n");
+   return yy::parser::make_LPAR(yytext);
 }
 
 ")" {
-   printf("RPAR\n");
+   return yy::parser::make_RPAR(yytext);
 }
 
 "[" {
-   printf("LBRACKET\n");
+   return yy::parser::make_LBRACKET(yytext);
 }
 
 "]" {
-   printf("RBRACKET\n");
+   return yy::parser::make_RBRACKET(yytext);
 }
 
 ";" {
-   printf("SC\n");
+   return yy::parser::make_SC(yytext);
 }
 
 "=" {
-   printf("EQASSIGN\n");
+   return yy::parser::make_EQASSIGN(yytext);
 }
 
 "!" {
-   printf("NOT\n");
+   return yy::parser::make_NOT(yytext);
 }
 
 "<" {
-   printf("LT\n");
+   return yy::parser::make_LT(yytext);
 }
 
 ">" {
-   printf("GT\n");
+   return yy::parser::make_GT(yytext);
 }
 
 "&&" {
-   printf("AND\n");
+   return yy::parser::make_AND(yytext);
 }
 
 "||" {
-   printf("OR\n");
+   return yy::parser::make_OR(yytext);
 }
 
 "==" {
-   printf("EQ\n");
+   return yy::parser::make_EQ(yytext);
 }
 
 "+" {
-   printf("ADDSIGN\n");
+   return yy::parser::make_ADDSIGN(yytext);
 }
 
 "-" {
-   printf("SUBSIGN\n");
+   return yy::parser::make_SUBSIGN(yytext);
 }
 
 "*" {
-   printf("MULSIGN\n");
+   return yy::parser::make_MULSIGN(yytext);
 }
 
 "/" {
-   printf("DIVSIGN\n");
+   return yy::parser::make_DIVSIGN(yytext);
 }
 
 "." {
-   printf("DOT\n");
+   return yy::parser::make_DOT(yytext);
 }
 
 "," {
-   printf("COMMA\n");
+   return yy::parser::make_COMMA(yytext);
 }
 
 "public" {
-   printf("PUBLIC\n");
+   return yy::parser::make_PUBLIC(yytext);
 }
 
 "static" {
-   printf("STATIC\n");
+   return yy::parser::make_STATIC(yytext);
 }
 
 "void" {
-   printf("VOID\n");
+   return yy::parser::make_VOID(yytext);
 }
 
 "main" {
-   printf("MAIN\n");
+   return yy::parser::make_MAIN(yytext);
 }
 
 "extends" {
-   printf("EXTENDS\n");
+   return yy::parser::make_EXTENDS(yytext);
 }
 
 "boolean" {
-   printf("BOOL\n");
+   return yy::parser::make_BOOL(yytext);
 }
 
 "String" {
-   printf("STRING\n");
+   return yy::parser::make_STRING(yytext);
 }
 
 "int" {
-   printf("INT\n");
+   return yy::parser::make_INT(yytext);
 }
 
 "if" {
-   printf("IF\n");
+   return yy::parser::make_IF(yytext);
 }
 
 "else" {
-   printf("ELSE\n");
+   return yy::parser::make_ELSE(yytext);
 }
 
 "while" {
-   printf("WHILE\n");
+   return yy::parser::make_WHILE(yytext);
 }
 
 "System.out.println" {
-   printf("printLN\n");
+   return yy::parser::make_printLN(yytext);
 }
 
 "length" {
-   printf("LENGTH\n");
+   return yy::parser::make_LENGTH(yytext);
 }
 
 "return" {
-   printf("RETURN\n");
+   return yy::parser::make_RETURN(yytext);
 }
 
 "true" {
-   printf("TRUE\n");
+   return yy::parser::make_TRUE(yytext);
 }
 
 "false" {
-   printf("FALSE\n");
+   return yy::parser::make_FALSE(yytext);
 }
 
 "this" {
-   printf("THIS\n");
+   return yy::parser::make_THIS(yytext);
 }
 
 "new" {
-   printf("NEW\n");
+   return yy::parser::make_NEW(yytext);
 }
 
 {INTEGER_LITERAL} {
-   printf("INT_LITERAL: %s\n", yytext);
+   return yy::parser::make_INT_LITERAL(yytext);
 }
 
 {IDENTIFIER} {
-   printf("IDENTIFIER: %s\n", yytext);
+   return yy::parser::make_ID(yytext);
 }
 
 {COMMENT} {
@@ -184,30 +180,9 @@ STRING_LITERAL \"[^\"]*\"
 [\t\n ]+ {
 }
 
+"//"[^\n]* {
+}
+
 . {
-    if (buffer == NULL)
-        buffer = (char*)malloc(15);
-
-    buffer[nextPos] = yytext[0];
-    nextPos++;
-
-    if (nextPos == bufferSize)
-    {
-        bufferSize = bufferSize * 2;
-        buffer = (char*)realloc(buffer, bufferSize);
-    }
-}
-
-<<EOF>>  {
-    if (buffer != NULL) {
-        buffer[nextPos] = '\0';
-        return yyError(buffer);
-    }
-    else
-        return 0;
-}
-%%
-int yyError(const char* str) {
-   fprintf(stderr, "Unrecognized input: %s\n", str);
-   return 0;
+   return *yytext;
 }

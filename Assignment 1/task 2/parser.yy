@@ -86,6 +86,12 @@ VarDeclarationList:
     $$->children.push_back($2);
 };
 
+VarDeclaration:
+  Type Identifier SC {
+    $$ = new Node("Variable", "", yylineno);
+    $$->children.push_back($1);
+    $$->children.push_back($2);
+};
 
 
 

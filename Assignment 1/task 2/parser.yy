@@ -47,7 +47,7 @@ ClassDeclarationList:
   Classdeclaration {
     $$ = new Node("ClassList", "", yylineno);
     $$->children.push_back($1);
-    }
+  }
   | ClassDeclarationList Classdeclaration {
     $$ = $1;
     $$->children.push_back($1);

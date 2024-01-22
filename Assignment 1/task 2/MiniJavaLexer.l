@@ -35,7 +35,6 @@ INTEGER_LITERAL 0|[1-9][0-9]*
 "static" {if(USE_LEX_ONLY) {printf("STATIC\n");} else {return yy::parser::make_STATIC(yytext);}}
 "void" {if(USE_LEX_ONLY) {printf("VOID\n");} else {return yy::parser::make_VOID(yytext);}}
 "main" {if(USE_LEX_ONLY) {printf("MAIN\n");} else {return yy::parser::make_MAIN(yytext);}}
-"extends" {if(USE_LEX_ONLY) {printf("EXTENDS\n");} else {return yy::parser::make_EXTENDS(yytext);}}
 "boolean" {if(USE_LEX_ONLY) {printf("BOOLEAN\n");} else {return yy::parser::make_BOOL(yytext);}}
 "String" {if(USE_LEX_ONLY) {printf("STRING\n");} else {return yy::parser::make_STRING(yytext);}}
 "int" {if(USE_LEX_ONLY) {printf("INT\n");} else {return yy::parser::make_INT(yytext);}}

@@ -60,9 +60,6 @@ ClassDeclaration:
     $$->children.push_back($3); // VarDeclaration
 };
 
-
-
-
 ClassBody: 
   LBRACE RBRACE {
     $$ = new Node("No class body", "", yylineno);
@@ -79,6 +76,15 @@ ClassBody:
     $$->children.push_back($3);
 };
 
+VarDeclarationList:
+  VarDeclaration {
+    $$ = new Node("class vars", "", yylineno);
+    $$->children.push_back($1);
+  }
+  | VarDeclarationList VarDeclaration {
+    $$ = $1;
+    $$->children.push_back($2);
+};
 
 
 

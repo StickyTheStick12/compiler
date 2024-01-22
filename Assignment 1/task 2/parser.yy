@@ -37,49 +37,36 @@ Goal:
 
 MainClass:
     CLASS Identifier LBRACE PUBLIC STATIC VOID MAIN LPAR STRING LBRACKET RBRACKET Identifier RPAR LBRACE Statement RBRACE RBRACE {
-    $$ new Node("Main Class", "", yylineno);
-    $$->children.push_back($2); // Identifier
-    $$->children.push_back($12); // Identifier
-    $$->children.push_back($15); // Statement
+      $$ new Node("Main Class", "", yylineno);
+      $$->children.push_back($2); // Identifier
+      $$->children.push_back($12); // Identifier
+      $$->children.push_back($15); // Statement
     };
 
 ClassDeclaration:
   CLASS Identifier ClassBody {
-  $$ = new Node("Class", "", yylineno);
-  $$->children.push_back($2); // Identifier
-  $$->children.push_back($3); // VarDeclaration
-}
+    $$ = new Node("Class", "", yylineno);
+    $$->children.push_back($2); // Identifier
+    $$->children.push_back($3); // VarDeclaration
+};
+
+ClassBody: 
+  LBRACE RBRACE {
+    $$ = new Node("No class body", "", yylineno);
+  }
+  | LBRAVE ClassDeclarationVars RBRACE {
+    $$ = $2;
+  }
+  | LBRACE ClassDeclarationMethods RBRACE {
+    $$ = $2;
+  }
+  | LBRACE ClassDeclarationVars ClassDeclarationMethods RBRACE {
+    $$ = new Node("Class body", "", yylineno);
+    $$->children.push_back($2);
+    $$->children.push_back($3);
+};
 
 
 
 
-root:       expression {root = $1;};
 
-expression: expression PLUSOP expression {      /*
-                                                  Create a subtree that corresponds to the AddExpression
-                                                  The root of the subtree is AddExpression
-                                                  The childdren of the AddExpression subtree are the left hand side (expression accessed through $1) and right hand side of the expression (expression accessed through $3)
-                                                */
-                            $$ = new Node("AddExpression", "", yylineno);
-                            $$->children.push_back($1);
-                            $$->children.push_back($3);
-                            /* printf("r1 "); */
-                          }
-            | expression MINUSOP expression {
-                            $$ = new Node("SubExpression", "", yylineno);
-                            $$->children.push_back($1);
-                            $$->children.push_back($3);
-                            /* printf("r2 "); */
-                          }
-            | expression MULTOP expression {
-                            $$ = new Node("MultExpression", "", yylineno);
-                            $$->children.push_back($1);
-                            $$->children.push_back($3);
-                            /* printf("r3 "); */
-                          }
-            | factor      {$$ = $1; /* printf("r4 ");*/}
-            ;
-
-factor:     INT           {  $$ = new Node("Int", $1, yylineno); /* printf("r5 ");  Here we create a leaf node Int. The value of the leaf node is $1 */}
-            | LP expression RP { $$ = $2; /* printf("r6 ");  simply return the expression */}
-    ;

@@ -112,10 +112,6 @@ INTEGER_LITERAL 0|-?[1-9][0-9]*
    printf("MAIN\n");
 }
 
-"extends" {
-   printf("EXTENDS\n");
-}
-
 "boolean" {
    printf("BOOL\n");
 }

@@ -43,6 +43,12 @@ MainClass:
     $$->children.push_back($15); // Statement
     };
 
+ClassDeclaration:
+  CLASS Identifier ClassBody {
+  $$ = new Node("Class", "", yylineno);
+  $$->children.push_back($2); // Identifier
+  $$->children.push_back($3); // VarDeclaration
+}
 
 
 

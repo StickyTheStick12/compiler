@@ -37,7 +37,7 @@ Goal:
 
 MainClass:
     CLASS Identifier LBRACE PUBLIC STATIC VOID MAIN LPAR STRING LBRACKET RBRACKET Identifier RPAR LBRACE Statement RBRACE RBRACE {
-    $$ new Node("Main Class", "");
+    $$ new Node("Main Class", "", yylineno);
     $$->children.push_back($2); // Identifier
     $$->children.push_back($12); // Identifier
     $$->children.push_back($15); // Statement

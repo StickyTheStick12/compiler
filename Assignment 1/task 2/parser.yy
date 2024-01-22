@@ -43,12 +43,25 @@ MainClass:
       $$->children.push_back($15); // Statement
     };
 
+ClassDeclarationList:
+  Classdeclaration {
+    $$ = new Node("ClassList", "", yylineno);
+    $$->children.push_back($1);
+    }
+  | ClassDeclarationList Classdeclaration {
+    $$ = $1;
+    $$->children.push_back($1);
+  };
+
 ClassDeclaration:
   CLASS Identifier ClassBody {
     $$ = new Node("Class", "", yylineno);
     $$->children.push_back($2); // Identifier
     $$->children.push_back($3); // VarDeclaration
 };
+
+
+
 
 ClassBody: 
   LBRACE RBRACE {

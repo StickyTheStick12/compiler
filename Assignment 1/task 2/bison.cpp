@@ -23,6 +23,8 @@
 %token END 0 "end of file"
 
 //definition of operator precedence. See https://www.gnu.org/software/bison/manual/bison.html#Precedence-Decl
+%precedence "then"
+%precedence ELSE
 %right EQ
 %left OR
 %left AND
@@ -203,12 +205,12 @@ Statement:
     | LBRACE Statements RBRACE {
         $$ = $2;
     }
-    | IF LPAR Expression RPAR Statement {
+    | IF LPAR Expression RPAR Statement %prec "then" {
         $$ = new Node("If statement", "", yylineno);
         $$->children.push_back($3); // Expression
         $$->children.push_back($5); // Statement
     }
-    | IF LPAR Expression RPAR Statement ELSE Statement{
+    | IF LPAR Expression RPAR Statement ELSE Statement {
         $$ = new Node("If else", "", yylineno);
         $$->children.push_back($3); // Expression
         $$->children.push_back($5); // If Statement

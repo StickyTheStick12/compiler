@@ -33,16 +33,16 @@
 %left NOT
 
 // definition of the production rules. All production rules are of type Node
-%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclaration MethodBody MethodDeclarationParameter MethodDeclarationParameters VarDeclarationMethod MethodStatement Type Statement Statements Expression commaExpression
+%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclaration MethodBody MethodDeclarationParameter MethodDeclarationParameters VarDeclarationMethod MethodStatement Type Statement Statements Expression commaExpression Identifier Int
 
 %%
 
 Goal:
     MainClass END { $$ = $1; root = $$; }
-    | MainClass ClassDeclarationList END { 
-        $$ = $1; 
-        $$->children.push_back($2); 
-        root = $$; 
+    | MainClass ClassDeclarationList END {
+        $$ = $1;
+        $$->children.push_back($2);
+        root = $$;
     };
 
 MainClass:
@@ -59,17 +59,17 @@ StatementList:
         $$ = new Node("Main class statement", "", yylineno);
         $$->children.push_back($1);
     }
-    | StatementList statement {
+    | StatementList Statement {
         $$ = $1;
         $$->children.push_back($2);
     };
 
 ClassDeclarationList:
-  Classdeclaration {
+  ClassDeclaration {
     $$ = new Node("ClassList", "", yylineno);
     $$->children.push_back($1);
   }
-  | ClassDeclarationList Classdeclaration {
+  | ClassDeclarationList ClassDeclaration {
     $$ = $1;
     $$->children.push_back($1);
   };
@@ -81,17 +81,17 @@ ClassDeclaration:
         $$->children.push_back($3); // VarDeclaration
     };
 
-ClassBody: 
+ClassBody:
     LBRACE RBRACE {
         $$ = new Node("No class body", "", yylineno);
     }
-    | LBRAVE VarDeclarationClassList RBRACE {
+    | LBRACE VarDeclarationClassList RBRACE {
         $$ = $2;
     }
-    | LBRACE ClassDeclarationMethods RBRACE {
+    | LBRACE MethodDeclaration RBRACE {
         $$ = $2;
     }
-    | LBRACE VarDeclarationClassList ClassDeclarationMethods RBRACE {
+    | LBRACE VarDeclarationClassList MethodDeclaration RBRACE {
         $$ = new Node("Class body", "", yylineno);
         $$->children.push_back($2);
         $$->children.push_back($3);
@@ -150,7 +150,7 @@ MethodDeclarationParameter:
     $$->children.push_back($1);
     $$->children.push_back($2);
   };
-  
+
 MethodDeclarationParameters:
   MethodDeclarationParameter {
     $$ = new Node("Merhod parameters", "", yylineno);
@@ -181,7 +181,7 @@ MethodStatement:
     $$->children.push_back($2);
   };
 
-Type: 
+Type:
     INT LBRACKET RBRACKET {
         $$ = new Node("Type", "int[]", yylineno);
     }
@@ -209,7 +209,7 @@ Statement:
         $$->children.push_back($5); // Statement
     }
     | IF LPAR Expression RPAR Statement ELSE Statement{
-        $$ = new Node("If else", "", yylineno)
+        $$ = new Node("If else", "", yylineno);
         $$->children.push_back($3); // Expression
         $$->children.push_back($5); // If Statement
         $$->children.push_back($7); // Else Statement
@@ -228,7 +228,7 @@ Statement:
         $$->children.push_back($1);
         $$->children.push_back($3);
     }
-    | Identifier LBRACKET Expression RBRACket EQASSIGN Expression SC {
+    | Identifier LBRACKET Expression RBRACKET EQASSIGN Expression SC {
         $$ = new Node("Array assign", "");
         $$->children.push_back($1);
         $$->children.push_back($3);
@@ -311,8 +311,8 @@ Expression:
         $$->children.push_back($1);
         $$->children.push_back($3);
     }
-    | INT_LITERAL {
-        $$ = new Node("Int", $1, yylineno);
+    | Int {
+        $$ = $1;
     }
     | TRUE {
         $$ = new Node("TRUE", "", yylineno);
@@ -352,3 +352,16 @@ commaExpression:
         $$->children.push_back($1);
         $$->children.push_back($3);
     };
+
+Identifier:
+  ID {
+  $$ = new Node("ID", $1.yylineno);
+  };
+
+Int:
+  INT_LITERAL{
+  $$ = new Node("Int", $1, yylineno);
+  }
+  | SUBSIGN INT_LITERAL {
+  $$ = new Node("Int", "-"+ $2, yylineno;)
+  };

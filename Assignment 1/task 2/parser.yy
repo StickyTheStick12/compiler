@@ -35,7 +35,7 @@
 %left NOT
 
 // definition of the production rules. All production rules are of type Node
-%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclaration MethodBody MethodDeclarationParameter MethodDeclarationParameters VarDeclarationMethod MethodStatement Type Statement Statements Expression commaExpression Identifier Int
+%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclaration MethodBody MethodDeclarationParameter MethodDeclarationParameters VarDeclarationMethod MethodStatement Type Statement Statements Expression PrimaryExpression commaExpression Identifier Int
 
 %%
 
@@ -49,11 +49,11 @@ Goal:
 
 MainClass:
     PUBLIC CLASS Identifier LBRACE PUBLIC STATIC VOID MAIN LPAR STRING LBRACKET RBRACKET Identifier RPAR LBRACE Statement StatementList RBRACE RBRACE {
-      $$ = new Node("Main Class", "", yylineno);
-      $$->children.push_back($3); // Identifier
-      $$->children.push_back($13); // Identifier
-      $$->children.push_back($16); // Statement
-      //$$->children.push_back($17); // Statementlist
+    $$ = new Node("Main Class", "", yylineno);
+    $$->children.push_back($3); // Identifier
+    $$->children.push_back($13); // Identifier
+    $$->children.push_back($16); // Statement
+    //$$->children.push_back($17); // Statementlist
     };
 
 StatementList:
@@ -194,7 +194,7 @@ Type:
         $$ = new Node("Type", "int", yylineno);
     }
     | Identifier {
-        $$ = new Node("Type", "ID", yylineno);
+        $$ = new Node("Type", "Identifier", yylineno);
         $$->children.push_back($1);
     };
 
@@ -292,10 +292,20 @@ Expression:
         $$= new Node("/ expression", "", yylineno);
         $$->children.push_back($1);
         $$->children.push_back($3);
+    }
+    | NOT Expression {
+        $$ = new Node("! expression", "", yylineno);
+        $$->children.push_back($2);
+    }
+    | PrimaryExpression {
+        $$ = $1;
     };
 
-parentExpression:
+PrimaryExpression:
     Int {
+        $$ = $1;
+    }
+    | Identifier {
         $$ = $1;
     }
     | TRUE {
@@ -307,25 +317,22 @@ parentExpression:
     | THIS {
         $$ = new Node("THIS", "", yylineno);
     }
-    | Identifier {
-        $$ = $1;
-    }
-    | parentExpression DOT LENGTH {
-        $$ = new Node("Expression.Length", "", yylineno);
-        $$->children.push_back($1);
-    }
-    | parentExpression LBRACKET Expression RBRACKET {
+    | PrimaryExpression LBRACKET Expression RBRACKET {
         $$ = new Node("Array access", "", yylineno);
         $$->children.push_back($1);
         $$->children.push_back($3);
     }
-    | parentExpression DOT Identifier LPAR commaExpression RPAR {
+    | PrimaryExpression DOT LENGTH {
+        $$ = new Node("Expression.Length", "", yylineno);
+        $$->children.push_back($1);
+    }
+    | PrimaryExpression DOT Identifier LPAR commaExpression RPAR {
         $$ = new Node("Method call", "", yylineno);
         $$->children.push_back($1);
         $$->children.push_back($3);
         $$->children.push_back($5);
     }
-    | parentExpression DOT Identifier LPAR RPAR {
+    | PrimaryExpression DOT Identifier LPAR RPAR {
         $$ = new Node("Method call", "", yylineno);
         $$->children.push_back($1);
         $$->children.push_back($3);
@@ -341,11 +348,8 @@ parentExpression:
     | LPAR Expression RPAR {
         $$ = new Node("(Expression)", "", yylineno);
         $$->children.push_back($2);
-    }
-    | NOT Expression {
-        $$ = new Node("! expression", "", yylineno);
-        $$->children.push_back($2);
-    };;
+    };
+
 
 commaExpression:
     Expression {

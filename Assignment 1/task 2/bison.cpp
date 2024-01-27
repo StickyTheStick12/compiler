@@ -6,6 +6,7 @@
 
 %code requires{
   #include <string>
+  #include <stdio.h>
   #include "Node.h"
   #define USE_LEX_ONLY false //change this macro to true if you want to isolate the lexer from the parser.
 }
@@ -35,7 +36,7 @@
 %left NOT
 
 // definition of the production rules. All production rules are of type Node
-%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclaration MethodBody MethodDeclarationParameter MethodDeclarationParameters VarDeclarationMethod MethodStatement Type Statement Statements Expression commaExpression Identifier Int
+%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclaration MethodBody MethodDeclarationParameter Method MethodDeclarationParameters Type Statement Statements Expression PrimaryExpression commaExpression Identifier Int
 
 %%
 
@@ -48,8 +49,8 @@ Goal:
     };
 
 MainClass:
-    PUBLIC CLASS Identifier LBRACE PUBLIC STATIC VOID MAIN LPAR STRING LBRACKET RBRACKET Identifier RPAR LBRACE Statement StatementList RBRACE RBRACE {
-    $$ new Node("Main Class", "", yylineno);
+    PUBLIC CLASS Identifier LBRACE PUBLIC STATIC VOID MAIN LPAR STRING LBRACKET RBRACKET Identifier RPAR LBRACE StatementList RBRACE RBRACE {
+    $$ = new Node("Main Class", "", yylineno);
     $$->children.push_back($3); // Identifier
     $$->children.push_back($13); // Identifier
     $$->children.push_back($16); // Statement
@@ -58,10 +59,12 @@ MainClass:
 
 StatementList:
     Statement {
+        printf("Statement\n");
         $$ = new Node("Main class statement", "", yylineno);
         $$->children.push_back($1);
     }
     | StatementList Statement {
+        printf("StatementList\n");
         $$ = $1;
         $$->children.push_back($2);
     };
@@ -88,9 +91,11 @@ ClassBody:
         $$ = new Node("No class body", "", yylineno);
     }
     | LBRACE VarDeclarationClassList RBRACE {
+        printf("VarDec\n");
         $$ = $2;
     }
     | LBRACE MethodDeclaration RBRACE {
+        printf("MethodDec\n");
         $$ = $2;
     }
     | LBRACE VarDeclarationClassList MethodDeclaration RBRACE {
@@ -135,12 +140,7 @@ MethodBody:
   LBRACE RETURN Expression SC RBRACE {
     $$ = $3;
   }
-  | LBRACE VarDeclarationMethod RETURN Expression SC RBRACE {
-    $$ = new Node("Method body", "", yylineno);
-    $$->children.push_back($2);
-    $$->children.push_back($4);
-  }
-  | LBRACE MethodStatement RETURN Expression SC RBRACE {
+  | LBRACE Method RETURN Expression SC RBRACE {
     $$ = new Node("Method body", "", yylineno);
     $$->children.push_back($2);
     $$->children.push_back($4);
@@ -163,25 +163,23 @@ MethodDeclarationParameters:
     $$->children.push_back($3);
   };
 
-VarDeclarationMethod:
-  VarDeclaration {
-    $$ = new Node("Method variabels", "", yylineno);
-    $$->children.push_back($1);
-  }
-  | VarDeclarationMethod VarDeclaration {
-    $$ = $1;
-    $$->children.push_back($2);
-  };
-
-MethodStatement:
-  Statement {
-    $$ = new Node("Method statement", "", yylineno);
-    $$->children.push_back($1);
-  }
-  | MethodStatement Statement {
-    $$ = $1;
-    $$->children.push_back($2);
-  };
+Method:
+    VarDeclaration {
+        $$ = new Node("Method variables", "", yylineno);
+        $$->children.push_back($1);
+    }
+    | Statement {
+        $$ = new Node("Method statement", "", yylineno);
+        $$->children.push_back($1);
+    }
+    | Method VarDeclaration {
+        $$ = $1;
+        $$->children.push_back($2);
+    }
+    | Method Statement {
+        $$ = $1;
+        $$->children.push_back($2);
+    };
 
 Type:
     INT LBRACKET RBRACKET {
@@ -194,7 +192,7 @@ Type:
         $$ = new Node("Type", "int", yylineno);
     }
     | Identifier {
-        $$ = new Node("Type", "Identifier");
+        $$ = new Node("Type", "Identifier", yylineno);
         $$->children.push_back($1);
     };
 
@@ -231,7 +229,7 @@ Statement:
         $$->children.push_back($3);
     }
     | Identifier LBRACKET Expression RBRACKET EQASSIGN Expression SC {
-        $$ = new Node("Array assign", "");
+        $$ = new Node("Array assign", "", yylineno);
         $$->children.push_back($1);
         $$->children.push_back($3);
         $$->children.push_back($6);
@@ -293,27 +291,19 @@ Expression:
         $$->children.push_back($1);
         $$->children.push_back($3);
     }
-    | LBRACKET Expression RBRACKET {
-        $$ = new Node("Array access", "", yylineno);
-        $$->children.push_back($1);
-        $$->children.push_back($3);
+    | NOT Expression {
+        $$ = new Node("! expression", "", yylineno);
+        $$->children.push_back($2);
     }
-    | DOT LENGTH {
-        $$ = new Node("Expression.Length", "", yylineno);
-        $$->children.push_back($1);
+    | PrimaryExpression {
+        $$ = $1;
+    };
+
+PrimaryExpression:
+    Int {
+        $$ = $1;
     }
-    | DOT Identifier LPAR commaExpression RPAR {
-        $$ = new Node("Method call", "", yylineno);
-        $$->children.push_back($1);
-        $$->children.push_back($3);
-        $$->children.push_back($5);
-    }
-    | DOT Identifier LPAR RPAR {
-        $$ = new Node("Method call", "", yylineno);
-        $$->children.push_back($1);
-        $$->children.push_back($3);
-    }
-    | Int {
+    | Identifier {
         $$ = $1;
     }
     | TRUE {
@@ -322,28 +312,42 @@ Expression:
     | FALSE {
         $$ = new Node("FALSE", "", yylineno);
     }
-    | Identifier {
-        $$ = new Node("Identifier", $1, yylineno);
-    }
     | THIS {
         $$ = new Node("THIS", "", yylineno);
     }
+    | PrimaryExpression LBRACKET Expression RBRACKET {
+        $$ = new Node("Array access", "", yylineno);
+        $$->children.push_back($1);
+        $$->children.push_back($3);
+    }
+    | PrimaryExpression DOT LENGTH {
+        $$ = new Node("Expression.Length", "", yylineno);
+        $$->children.push_back($1);
+    }
+    | PrimaryExpression DOT Identifier LPAR commaExpression RPAR {
+        $$ = new Node("Method call", "", yylineno);
+        $$->children.push_back($1);
+        $$->children.push_back($3);
+        $$->children.push_back($5);
+    }
+    | PrimaryExpression DOT Identifier LPAR RPAR {
+        $$ = new Node("Method call", "", yylineno);
+        $$->children.push_back($1);
+        $$->children.push_back($3);
+    }
     | NEW INT LBRACKET Expression RBRACKET {
         $$ = new Node("new int[] expression", "", yylineno);
-        $$->children.push_back($4)
+        $$->children.push_back($4);
     }
     | NEW Identifier LPAR RPAR {
         $$ = new Node("Object Instatntaion", "", yylineno);
-        $$->children.push_back($2);
-    }
-    | NOT Expression {
-        $$ = new Node("! expression", "", yylineno);
         $$->children.push_back($2);
     }
     | LPAR Expression RPAR {
         $$ = new Node("(Expression)", "", yylineno);
         $$->children.push_back($2);
     };
+
 
 commaExpression:
     Expression {
@@ -357,7 +361,7 @@ commaExpression:
 
 Identifier:
   ID {
-  $$ = new Node("ID", $1.yylineno);
+  $$ = new Node("ID", $1, yylineno);
   };
 
 Int:
@@ -365,5 +369,5 @@ Int:
   $$ = new Node("Int", $1, yylineno);
   }
   | SUBSIGN INT_LITERAL {
-  $$ = new Node("Int", "-"+ $2, yylineno;)
+  $$ = new Node("Int", "-"+ $2, yylineno);
   };

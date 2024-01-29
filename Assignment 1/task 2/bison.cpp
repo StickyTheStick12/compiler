@@ -59,12 +59,10 @@ MainClass:
 
 StatementList:
     Statement {
-        printf("Statement\n");
         $$ = new Node("Main class statement", "", yylineno);
         $$->children.push_back($1);
     }
     | StatementList Statement {
-        printf("StatementList\n");
         $$ = $1;
         $$->children.push_back($2);
     };

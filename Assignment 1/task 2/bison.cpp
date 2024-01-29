@@ -74,7 +74,7 @@ ClassDeclarationList:
   }
   | ClassDeclarationList ClassDeclaration {
     $$ = $1;
-    $$->children.push_back($1);
+    $$->children.push_back($2);
   };
 
 ClassDeclaration:
@@ -89,11 +89,9 @@ ClassBody:
         $$ = new Node("No class body", "", yylineno);
     }
     | LBRACE VarDeclarationClassList RBRACE {
-        printf("VarDec\n");
         $$ = $2;
     }
     | LBRACE MethodDeclaration RBRACE {
-        printf("MethodDec\n");
         $$ = $2;
     }
     | LBRACE VarDeclarationClassList MethodDeclaration RBRACE {

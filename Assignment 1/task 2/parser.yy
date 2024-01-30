@@ -6,6 +6,7 @@
 
 %code requires{
   #include <string>
+  #include <stdio.h>
   #include "Node.h"
   #define USE_LEX_ONLY false //change this macro to true if you want to isolate the lexer from the parser.
 }
@@ -35,7 +36,7 @@
 %left NOT
 
 // definition of the production rules. All production rules are of type Node
-%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclaration MethodBody MethodDeclarationParameter MethodDeclarationParameters VarDeclarationMethod MethodStatement Type Statement Statements Expression PrimaryExpression commaExpression Identifier Int
+%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclarationList MethodDeclaration MethodBody MethodDeclarationParameter Method MethodDeclarationParameters Type Statement Statements Expression PrimaryExpression commaExpression Identifier Int
 
 %%
 
@@ -73,7 +74,7 @@ ClassDeclarationList:
   }
   | ClassDeclarationList ClassDeclaration {
     $$ = $1;
-    $$->children.push_back($1);
+    $$->children.push_back($2);
   };
 
 ClassDeclaration:
@@ -90,14 +91,24 @@ ClassBody:
     | LBRACE VarDeclarationClassList RBRACE {
         $$ = $2;
     }
-    | LBRACE MethodDeclaration RBRACE {
+    | LBRACE MethodDeclarationList RBRACE {
         $$ = $2;
     }
-    | LBRACE VarDeclarationClassList MethodDeclaration RBRACE {
+    | LBRACE VarDeclarationClassList MethodDeclarationList RBRACE {
         $$ = new Node("Class body", "", yylineno);
         $$->children.push_back($2);
         $$->children.push_back($3);
     };
+
+MethodDeclarationList:
+ MethodDeclaration {
+    $$ = new Node("MethodDecList", "", yylineno);
+    $$->children.push_back($1);
+  }
+  | MethodDeclarationList MethodDeclaration {
+    $$ = $1;
+    $$->children.push_back($2);
+  };
 
 VarDeclarationClassList:
     VarDeclaration {
@@ -135,12 +146,7 @@ MethodBody:
   LBRACE RETURN Expression SC RBRACE {
     $$ = $3;
   }
-  | LBRACE VarDeclarationMethod RETURN Expression SC RBRACE {
-    $$ = new Node("Method body", "", yylineno);
-    $$->children.push_back($2);
-    $$->children.push_back($4);
-  }
-  | LBRACE MethodStatement RETURN Expression SC RBRACE {
+  | LBRACE Method RETURN Expression SC RBRACE {
     $$ = new Node("Method body", "", yylineno);
     $$->children.push_back($2);
     $$->children.push_back($4);
@@ -163,25 +169,23 @@ MethodDeclarationParameters:
     $$->children.push_back($3);
   };
 
-VarDeclarationMethod:
-  VarDeclaration {
-    $$ = new Node("Method variabels", "", yylineno);
-    $$->children.push_back($1);
-  }
-  | VarDeclarationMethod VarDeclaration {
-    $$ = $1;
-    $$->children.push_back($2);
-  };
-
-MethodStatement:
-  Statement {
-    $$ = new Node("Method statement", "", yylineno);
-    $$->children.push_back($1);
-  }
-  | MethodStatement Statement {
-    $$ = $1;
-    $$->children.push_back($2);
-  };
+Method:
+    VarDeclaration {
+        $$ = new Node("Method variables", "", yylineno);
+        $$->children.push_back($1);
+    }
+    | Statement {
+        $$ = new Node("Method statement", "", yylineno);
+        $$->children.push_back($1);
+    }
+    | Method VarDeclaration {
+        $$ = $1;
+        $$->children.push_back($2);
+    }
+    | Method Statement {
+        $$ = $1;
+        $$->children.push_back($2);
+    };
 
 Type:
     INT LBRACKET RBRACKET {

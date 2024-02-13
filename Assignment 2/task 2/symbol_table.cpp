@@ -1,4 +1,5 @@
 #include "symbol_table.h"
+#include "semantic.h"
 
 Symbol::Symbol(const std::string& id, const std::string& type, const std::string& symbol)
 {
@@ -200,7 +201,7 @@ void TraverseTree(Node* node, SymbolTable* ST)
         ST->Add(node->children.front()->value, new Variable(node->children.front()->value, "String[]"));
         ST->ExitScope();
     }
-    else if(node->type == "Class Body" || node->type == "class variables" || node->type == "Method" ||
+    else if(node->type == "Class body" || node->type == "Class variables" || node->type == "Method" ||
     node->type == "Method body" || node->type == "Method variables")
     {
         for(auto & iter : node->children)

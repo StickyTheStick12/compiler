@@ -9,16 +9,16 @@
 #include "Node.h"
 
 class Symbol {
-        protected:
-        std::string id;
-        std::string type;
-        std::string symbol;
+protected:
+    std::string id;
+    std::string type;
+    std::string symbol;
 
-        public:
-        Symbol(const std::string& id, const std::string& type, const std::string& symbol);
-        std::string GetId();
-        std::string GetType();
-        std::string PrintEntry();
+public:
+    Symbol(const std::string& id, const std::string& type, const std::string& symbol);
+    std::string GetId();
+    std::string GetType();
+    std::string PrintEntry();
 };
 
 class Variable : public Symbol {

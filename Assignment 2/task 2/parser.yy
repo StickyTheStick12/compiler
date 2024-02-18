@@ -36,7 +36,7 @@
 %left NOT
 
 // definition of the production rules. All production rules are of type Node
-%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclarationList MethodDeclaration MethodBody MethodDeclarationParameter Method MethodDeclarationParameters Type Statement Statements Expression PrimaryExpression commaExpression Identifier Int
+%type <Node*> Goal MainClass StatementList ClassDeclarationList ClassDeclaration ClassBody VarDeclarationClassList VarDeclaration MethodDeclarationList MethodDeclaration MethodBody MethodDeclarationParameter MethodList Method MethodDeclarationParameters Type Statement Statements Expression PrimaryExpression commaExpression Identifier Int
 
 %%
 
@@ -146,7 +146,7 @@ MethodBody:
   LBRACE RETURN Expression SC RBRACE {
     $$ = $3;
   }
-  | LBRACE Method RETURN Expression SC RBRACE {
+  | LBRACE MethodList RETURN Expression SC RBRACE {
     $$ = new Node("Method body", "", yylineno);
     $$->children.push_back($2);
     $$->children.push_back($4);
@@ -169,22 +169,26 @@ MethodDeclarationParameters:
     $$->children.push_back($3);
   };
 
+MethodList:
+    Method {
+        $$ = new Node("MethodList", "", yylineno);
+        $$->children.push_back($1);
+    }
+    | MethodList Method {
+        $$ = $1;
+        $$->children.push_back($2);
+    };
+
 Method:
     VarDeclaration {
-        $$ = new Node("Method variables", "", yylineno);
+        $$ = new Node("Method variable", "", yylineno);
         $$->children.push_back($1);
+        $$ = $1;
     }
     | Statement {
         $$ = new Node("Method statement", "", yylineno);
         $$->children.push_back($1);
-    }
-    | Method VarDeclaration {
         $$ = $1;
-        $$->children.push_back($2);
-    }
-    | Method Statement {
-        $$ = $1;
-        $$->children.push_back($2);
     };
 
 Type:
@@ -318,7 +322,7 @@ PrimaryExpression:
         $$ = new Node("FALSE", "", yylineno);
     }
     | THIS {
-        $$ = new Node("THIS", "", yylineno);
+        $$ = new Node("THIS", "this", yylineno);
     }
     | PrimaryExpression LBRACKET Expression RBRACKET {
         $$ = new Node("Array access", "", yylineno);
@@ -376,3 +380,4 @@ Int:
   | SUBSIGN INT_LITERAL {
   $$ = new Node("Int", "-" + $2, yylineno);
   };
+

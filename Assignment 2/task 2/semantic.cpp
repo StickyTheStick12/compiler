@@ -6,13 +6,13 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
     {
         for(auto & iter : node->children)
         {
-            ST->enterScope("", nullptr);
+            ST->EnterScope("", nullptr);
             TraverseTreeSemantic(ST, iter);
-            ST->exitScope();
+            ST->ExitScope();
         }
         return "void";
     }
-    else if(node->type == "Class" || node->type == "Class body" || node->type == "Method statement" || node->type == "Statements" || node->type == "Main class statement")
+    else if(node->type == "Class" || node->type == "Class body" || node->type == "Method statement" || node->type == "Statements" || node->type == "Main class statement" || node->type == "MethodList" || node->type == "Class variables")
     {
         for(auto & iter : node->children)
             TraverseTreeSemantic(ST, iter);
@@ -21,20 +21,19 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
     }
     else if(node->type == "Main Class")
     {
-        ST->enterScope("", nullptr);
+        ST->EnterScope("", nullptr);
+        for(auto iter = std::next(node->children.begin()); iter != node->children.end(); ++iter)
+            TraverseTreeSemantic(ST, *iter);
 
-        for(auto & iter : node->children)
-            TraverseTreeSemantic(ST, iter);
-
-        ST->exitScope();
+        ST->ExitScope();
         return "void";
     }
     else if(node->type == "MethodDecList")
     {
         for(auto & iter : node->children) {
-            ST->enterScope("", nullptr);
+            ST->EnterScope("", nullptr);
             TraverseTreeSemantic(ST, iter);
-            ST->exitScope();
+            ST->ExitScope();
         }
 
         return "void";
@@ -69,9 +68,9 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
 
         auto lhs = TraverseTreeSemantic(ST, node->children.front());
 
-        if(lhs != "boolean")
+        if(lhs != "bool")
         {
-            std::cout << "Cannot convert " << lhs << " to a boolean" << std::endl;
+            std::cout << "Cannot convert " << lhs << " to a bool" << std::endl;
             exit(-1);
         }
 
@@ -84,7 +83,12 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         auto rhs = TraverseTreeSemantic(ST, node->children.back());
 
         if(lhs != rhs)
+        {
             std::cout << "TypeError: " << lhs << " type does not match with " << rhs << " type" << std::endl;
+            std::cout << node->children.front()->type << std::endl;
+            std::cout << node->children.back()->type << std::endl;
+            exit(-1);
+        }
 
         return "void";
     }
@@ -117,13 +121,13 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         auto lhs = TraverseTreeSemantic(ST, node->children.front());
         auto rhs = TraverseTreeSemantic(ST, node->children.back());
 
-        if(lhs != "boolean" || rhs != "boolean")
+        if(lhs != "bool" || rhs != "bool")
         {
             std::cout << "TypeError: unsupported operands: " << lhs << " and " << rhs << std::endl;
             exit(-1);
         }
 
-        return "boolean";
+        return "bool";
     }
     else if(node->type == "EQ expression")
     {
@@ -136,7 +140,7 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
             exit(-1);
         }
 
-        return "boolean";
+        return "bool";
     }
     else if(node->type == "LT expression" || node->type == "GT expression")
     {
@@ -149,7 +153,7 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
             exit(-1);
         }
 
-        return "boolean";
+        return "bool";
     }
     else if(node->type == "Add expression" || node->type == "Sub expression" || node->type == "Mul expression" ||
             node->type == "Div expression")
@@ -169,15 +173,15 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
     {
         auto lhs = TraverseTreeSemantic(ST, node->children.front());
 
-        if(lhs != "boolean")
+        if(lhs != "bool")
         {
             std::cout << "TypeError: Unsupported operand type for !: " << lhs << std::endl;
             exit(-1);
         }
 
-        return "boolean";
+        return "bool";
     }
-    else if(node->type == "(Expression)" || node->type == "object instantiation")
+    else if(node->type == "(Expression)" || node->type == "Object instantiation")
         return TraverseTreeSemantic(ST, node->children.front());
     else if(node->type == "Array access")
     {
@@ -199,49 +203,42 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
     }
     else if(node->type == "Method call") {
         auto caller = TraverseTreeSemantic(ST, node->children.front());
-        auto callerSymbol = ST->lookup(caller);
-        auto callerClass = (Class*)ST->lookup(callerSymbol->getType());
-
+        auto callerRecord = ST->Lookup(caller);
+        auto callerClass = (Class*)ST->Lookup(callerRecord->GetType());
         if (callerClass == nullptr) {
-            std::cout << "Error: method is not defined on type" << std::endl;
+            cout << "Error: Method " << (*(++node->children.begin()))->value << " is not defined on instance of type " << callerRecord->GetType() << endl;
             exit(-1);
         }
-
         auto childrenFront = node->children.begin();
-        auto method = callerClass->lookupMethod((*std::next(childrenFront))->value);
-
-        if (method == nullptr)
-        {
-            std::cout << "Error: method is not defined on type" << std::endl;
+        advance(childrenFront, 1);
+        auto method = callerClass->MethodLookup((*childrenFront)->value);
+        if (method == nullptr) {
+            cout << "Error: Method " << (*childrenFront)->value << " is not defined on instance of type " << callerRecord->GetType() << endl;
             exit(-1);
         }
-
-        childrenFront = std::next(childrenFront);
-
+        advance(childrenFront, 1);
         if (childrenFront == node->children.end()) {
-            if (method->getNumParams() != 0 ||
-                method->getNumParams() != (*childrenFront)->children.size())
-            {
-                std::cout << "incorrect number of parameters for this method" << std::endl;
+            if (method->GetNumberParameters() != 0) {
+                cout << "Not the correct number of parameters for method " << method->GetId() << endl;
                 exit(-1);
             }
-            else {
-                int idx = 0;
-                for (auto & iter: (*childrenFront)->children) {
-                    auto type = TraverseTreeSemantic(ST, iter);
-
-                    if (type != method->getParam(idx)->getType())
-                    {
-                        std::cout << "TypeError: type missmatch" << std::endl;
-                        exit(-1);
-                    }
-
-                    idx++;
+        } else if (method->GetNumberParameters() != (*childrenFront)->children.size()) {
+            //std::cout << "Not the correct number of parameters for method " << method->GetId() << std::endl;
+            //std::cout << (*childrenFront)->children.size() << std::endl;
+            //std::cout << method->GetNumberParameters() << std::endl;
+            //exit(-1);
+        } else {
+            int idx = 0;
+            for (auto i=(*childrenFront)->children.begin(); i!=(*childrenFront)->children.end(); i++) {
+                auto type = TraverseTreeSemantic(ST, *i);
+                if (type != method->GetParameter(idx)->GetType()) {
+                    cout << "TypeError: type missmatch, '" << type << "' does not match with '" << method->GetParameter(idx)->GetType() << "' in method call " << method->GetId() << endl;
+                    exit(-1);
                 }
+                idx++;
             }
-
-            return method->getType();
         }
+        return method->GetType();
     }
     else if(node->type == "Expression.Length")
     {
@@ -271,7 +268,7 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         return (*node->children.begin())->value;
     else if(node->type == "ID" || node->type == "THIS")
     {
-        auto id = ST->lookup(node->value);
+        auto id = ST->Lookup(node->value);
 
         if(id == nullptr)
         {
@@ -279,12 +276,18 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
             exit(-1);
         }
 
-        return id->getType();
+        return id->GetType();
     }
     else if(node->type == "Int")
         return "int";
     else if(node->type == "TRUE" || node->type == "FALSE")
-        return "boolean";
+        return "bool";
 
     return node->value;
+}
+
+int Semantic_analysis(SymbolTable* symbolTable, Node* root)
+{
+    symbolTable->ResetTable();
+    return !TraverseTreeSemantic(symbolTable, root).empty();
 }

@@ -82,7 +82,7 @@ ClassDeclarationList:
 
 ClassDeclaration:
     CLASS Identifier ClassBody {
-        $$ = new Node("Class", $2->value, yylineno);
+        $$ = new Node("Class", $2->value, $2->lineno);
         $$->children.push_back($3); // VarDeclaration
     };
 
@@ -131,12 +131,12 @@ VarDeclaration:
 
 MethodDeclaration:
   PUBLIC Type Identifier LPAR RPAR MethodBody {
-    $$ = new Node("Method", $3->value, yylineno);
+    $$ = new Node("Method", $3->value, $2->lineno);
     $$->children.push_back($2);
     $$->children.push_back($6);
   }
   | PUBLIC Type Identifier LPAR MethodDeclarationParameters RPAR MethodBody {
-    $$ = new Node("Method", $3->value, yylineno);
+    $$ = new Node("Method", $3->value, $2->lineno);
     $$->children.push_back($2);
     $$->children.push_back($5);
     $$->children.push_back($7);
@@ -380,4 +380,3 @@ Int:
   | SUBSIGN INT_LITERAL {
   $$ = new Node("Int", "-" + $2, yylineno);
   };
-

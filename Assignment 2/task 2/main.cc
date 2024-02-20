@@ -64,15 +64,13 @@ int main(int argc, char **argv)
 			printf("\nPrint Tree:  \n");
 			try
 			{
-				root->print_tree();
+				//root->print_tree();
 				root->generate_tree();
-
-                std::cout << "\n\n\n" << std::endl;
-
   				SymbolTable *symbolTable = new SymbolTable();
                 TraverseTree(root, symbolTable);
                 symbolTable->PrintTable();
-                Semantic_analysis(symbolTable, root);
+                symbolTable->ResetTable();
+                TraverseTreeSemantic(symbolTable, root);
 			}
 			catch (...)
 			{

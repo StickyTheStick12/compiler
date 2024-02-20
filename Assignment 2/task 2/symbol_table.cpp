@@ -20,11 +20,9 @@ std::string Symbol::PrintEntry() {
     return "name " + id + "; symbol " + symbol + "; type " + type;
 }
 
-Variable::Variable(const std::string& name, const std::string& type) : Symbol(name, type, "Variable") {
-}
+Variable::Variable(const std::string& name, const std::string& type) : Symbol(name, type, "Variable") {}
 
-Method::Method(const std::string& name, const std::string& type) : Symbol(name, type, "Method") {
-}
+Method::Method(const std::string& name, const std::string& type) : Symbol(name, type, "Method") {}
 
 void Method::AddParameter(Variable* var) {
     parameters.push_back(var);
@@ -38,14 +36,14 @@ int Method::GetNumberParameters() {
     return parameters.size();
 }
 
-Class::Class(const std::string& name, const std::string& type) : Symbol(name, type, "Class") {
-}
+Class::Class(const std::string& name, const std::string& type) : Symbol(name, type, "Class") {}
 
 void Class::AddMethod(Method* method) {
     methods[method->GetId()] = method;
 }
 
-Method* Class::MethodLookup(const std::string& name) {
+Method* Class::MethodLookup(const std::string& name)
+{
     auto iter = methods.find(name);
 
     if(iter != methods.end())
@@ -61,12 +59,10 @@ Scope::Scope(Scope* parent, const std::string& name, Symbol* symbol) {
 }
 
 void Scope::Add(const std::string& id, Symbol* entry) {
-    // Function to add a symbol to the scope
     entries[id] = entry;
 }
 
 Symbol* Scope::GetScopeSymbol() {
-    // Function to get the symbol associated with the scope, Class or method
     return scopeSymbol;
 }
 
@@ -74,7 +70,8 @@ Scope* Scope::Parent() {
     return parentScope;
 }
 
-Scope* Scope::NextChild(const std::string& name, Symbol* symbol) {
+Scope* Scope::NextChild(const std::string& name, Symbol* symbol)
+{
     Scope* nextChild;
 
     if(next == childScopes.size())
@@ -98,9 +95,7 @@ Symbol* Scope::Lookup(const std::string& key)
         return iter->second;
 
     if(parentScope == nullptr)
-    {
         return nullptr;
-    }
 
     return parentScope->Lookup(key);
 }
@@ -112,20 +107,22 @@ void Scope::ResetScope() {
         childScope->ResetScope();
 }
 
-void Scope::PrintScope(int& count, ofstream* oStream) {
-    int id = count;
+void Scope::PrintScope(int& num, ofstream* oStream) {
 
-    *oStream << "n" << id << " [label=\"Symbol table: (" << scopeName << ")\\n";
+    *oStream << "n" << num << " [label=\"Symbol table: ("<< scopeName << ")\\n";
 
-    for (auto it = entries.begin(); it != entries.end(); ++it)
-        *oStream << entries[it->first]->PrintEntry() << "\\n";
+    for(auto & entry : entries)
+        *oStream << entries[entry.first]->PrintEntry() << "\\n";
 
-    *oStream << "\"];" << std::endl;
+    *oStream << "\"];" << endl;
 
-    for (auto & childScope : childScopes) {
-        int n = ++count;
-        childScope->PrintScope(count, oStream);
-        *oStream << "n" << id << " -> n" << n << std::endl;
+    int id = num;
+
+    for(auto & childScope : childScopes)
+    {
+        int n = ++num;
+        childScope->PrintScope(num, oStream);
+        *oStream << "n" << id << " -> n" << n << endl;
     }
 }
 
@@ -158,15 +155,15 @@ Scope* SymbolTable::GetCurrentScope() {
 void SymbolTable::PrintTable()
 {
     std::ofstream oStream;
-    oStream.open("symboltree.dot");
+    oStream.open("ST.dot");
 
-    int count = 0;
+    int num = 0;
     oStream << "digraph {" << std::endl;
-    root->PrintScope(count, &oStream);
+    root->PrintScope(num, &oStream);
     oStream << "}" << std::endl;
     oStream.close();
 
-    std::cout << "\nBuilt new symbol tree:" << std::endl;
+    std::cout << "Built a symbol-tree at ST.dot. Use 'make st' to generate the pdf version." << std::endl;
 }
 
 void SymbolTable::ResetTable() {
@@ -180,8 +177,9 @@ void TraverseTree(Node* node, SymbolTable* ST)
         for(auto iter : node->children)
         {
             if(ST->Lookup(iter->value) != nullptr)
-                std::cout << "An error occurred when creating class " << iter->value << ". A class with this name "
-                                                                                        "already exists" << std::endl;
+                std::cout << "Error at " << node->lineno << std::endl;
+                //std::cerr << "@error at line 8: semantic (Already Declared Class: 'DuplicateIdentifiers')" << std::endl;
+                //std::cerr << "Error: A class with name: " << iter->value << " already exists" << std::endl;
 
             auto nClass = new Class(iter->value, iter->value);
             ST->Add(iter->value, nClass);
@@ -192,6 +190,7 @@ void TraverseTree(Node* node, SymbolTable* ST)
     }
     else if(node->type == "Class")
     {
+        //the type will be the class name
         ST->Add("this", new Variable("this", node->value));
 
         for(auto & iter : node->children)
@@ -199,6 +198,7 @@ void TraverseTree(Node* node, SymbolTable* ST)
     }
     else if(node->type == "Main Class")
     {
+        //the type will be the class name
         ST->Add("this", new Variable("this", node->value));
         ST->Add("main", new Method("main", "void"));
         ST->EnterScope("Method: main", nullptr);
@@ -217,10 +217,9 @@ void TraverseTree(Node* node, SymbolTable* ST)
         for(auto & iter : node->children)
         {
             if(ST->Lookup(iter->value) != nullptr)
-                std::cout << "An error occurred when creating method " << iter->value << ". A method with this name "
-                                                                                         "already exists" << std::endl;
+                std::cout << "Error: A method with name: " << iter->value << " already exists" << std::endl;
 
-            auto nMethod = new Method(iter->value, (*iter->children.begin())->value);
+            auto nMethod = new Method(iter->value, (*iter->children.front()).value);
             ST->Add(iter->value, nMethod);
 
             ((Class*)ST->GetCurrentScope()->GetScopeSymbol())->AddMethod(nMethod);
@@ -231,24 +230,23 @@ void TraverseTree(Node* node, SymbolTable* ST)
         }
     }
     else if (node->type == "Variable") {
-        Node* type = (*node->children.begin());
-        auto end_idx = node->children.end();
-        Node* name = (*(--end_idx));
+        Node* type = *node->children.begin();
+        Node* name = *std::prev(node->children.end());
 
-        if (ST->Lookup(name->value) != NULL) {
-            cout << "Error: Identifier with name \"" << name->value << "\" already exists" << endl;
-            exit(-1);
-        }
+        if (ST->Lookup(name->value) != nullptr)
+            std::cout << "Error at " << node->lineno << std::endl;
+        //std::cout << "Error: A variable with name " << name->value << " already exists" << std::endl;
 
         ST->Add(name->value, new Variable(name->value, type->value));
     }
-    else if(node->type == "Method parameters") {
-        for (auto i = node->children.begin(); i != node->children.end(); i++) {
-            TraverseTree(*i, ST);
-            auto end_idx = (*i)->children.end();
-            Node *name = (*(--end_idx));
-            auto new_param = (Variable *) ST->Lookup(name->value);
-            ((Method *) ST->GetCurrentScope()->GetScopeSymbol())->AddParameter(new_param);
+    else if(node->type == "Method parameters")
+    {
+        for(auto & child : node->children)
+        {
+            TraverseTree(child, ST);
+            Node* name = *(std::prev(child->children.end()));
+            auto new_param = (Variable*)ST->Lookup(name->value);
+            ((Method*)ST->GetCurrentScope()->GetScopeSymbol())->AddParameter(new_param);
         }
     }
 }

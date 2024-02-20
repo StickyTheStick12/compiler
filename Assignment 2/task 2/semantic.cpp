@@ -1,6 +1,6 @@
 #include "semantic.h"
 
-//kolla assignment så rhs inte är void heller
+//todo print must be an int
 
 std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
 {
@@ -80,6 +80,10 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
             return "void";
 
         auto rhs = TraverseTreeSemantic(ST, node->children.back());
+
+        if(rhs == "void")
+            return "void";
+
         if(lhs != rhs)
             std::cout << "Error: " << lhs << " type does not match with " << rhs << " type" << std::endl;
 
@@ -194,27 +198,25 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
 
         childIter = std::next(childIter);
 
-        if(childIter == node->children.end())
+        if (childIter == node->children.end())
         {
-            if(method->GetNumberParameters() != 0)
+            if (method->GetNumberParameters() != 0)
             {
-                std::cout << "Error: method expects 0 arguments, 1 or more were provided for method " << method->GetId()
-                << std::endl;
-                exit(-1);
+                std::cout << "Error: method expects 0 arguments. 1 or more were provided for " << method->GetId() << std::endl;
                 return "void";
             }
         }
         else if (method->GetNumberParameters() != (*childIter)->children.size()) {
-            std::cout << method->GetNumberParameters() << std::endl;
-            //std::cout << "Not the correct number of parameters for method " << method->GetId() << std::endl;
-            //exit(-1);
+            std::cout << "Error: incorrect number of arguments for method " << method->GetId() << std::endl;
+            return "void";
         } else {
             int idx = 0;
-            for (auto i=(*childIter)->children.begin(); i!=(*childIter)->children.end(); i++) {
-                auto type = TraverseTreeSemantic(ST, *i);
+            for(auto & child : (*childIter)->children)
+            {
+                auto type = TraverseTreeSemantic(ST, child);
                 if (type != method->GetParameter(idx)->GetType()) {
-                    cout << "TypeError: type missmatch, '" << type << "' does not match with '" << method->GetParameter(idx)->GetType() << "' in method call " << method->GetId() << endl;
-                    exit(-1);
+                    std::cout << "Error: type of argument" << type <<" for method call " << method->GetId() << "differs from requested type, " << method->GetParameter(idx)->GetType() << std::endl;
+                    return "void";
                 }
                 idx++;
             }
@@ -259,10 +261,4 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         return "bool";
 
     return node->value;
-}
-
-int Semantic_analysis(SymbolTable* symbolTable, Node* root)
-{
-    symbolTable->ResetTable();
-    return !TraverseTreeSemantic(symbolTable, root).empty();
 }

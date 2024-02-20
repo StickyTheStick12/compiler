@@ -1,6 +1,6 @@
 #include "semantic.h"
 
-//todo print must be an int
+//todo fix so we dont generate multiple errors on the same line
 
 std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
 {
@@ -14,7 +14,7 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         }
         return "void";
     }
-    else if(node->type == "Class" || node->type == "Class body" || node->type == "Method statement" || node->type == "Statements" || node->type == "Main class statement" || node->type == "MethodList" || node->type == "Class variables" || node->type == "Print")
+    else if(node->type == "Class" || node->type == "Class body" || node->type == "Method statement" || node->type == "Statements" || node->type == "Main class statement" || node->type == "MethodList" || node->type == "Class variables" )
     {
         for(auto & iter : node->children)
             TraverseTreeSemantic(ST, iter);
@@ -45,11 +45,12 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         for(auto iter = node->children.begin(); iter != std::prev(node->children.end()); ++iter)
             TraverseTreeSemantic(ST, *iter);
 
-        auto returnType = TraverseTreeSemantic(ST, node->children.back());
+        std::string returnType = TraverseTreeSemantic(ST, node->children.back());
 
         if(node->children.front()->value != returnType)
-            std::cout << "Return type of method doesnt match type of returned value. Cannot convert " << returnType <<
-            " to " << node->children.front()->value << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+            ". Return type of method doesnt match type of returned value. Cannot convert "<< returnType <<
+            " to " << node->children.front()->value << "  " << std::endl;
 
         return node->children.front()->value;
     }
@@ -65,94 +66,112 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         for(auto iter = std::next(node->children.begin()); iter != node->children.end(); ++iter)
             TraverseTreeSemantic(ST, *iter);
 
-        auto lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
 
         if(lhs != "bool")
-            std::cout << "Error: if and while require a bool. Cannot convert " << lhs << " to a bool" << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". If and while require a bool. Cannot convert " << lhs << " to a bool" << std::endl;
 
         return "void";
     }
     else if(node->type == "Assignment")
     {
-        auto lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
 
         if(lhs == "void")
             return "void";
 
-        auto rhs = TraverseTreeSemantic(ST, node->children.back());
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
 
         if(rhs == "void")
             return "void";
 
         if(lhs != rhs)
-            std::cout << "Error: " << lhs << " type does not match with " << rhs << " type" << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". " << lhs << " type does not match with " << rhs << " type" << std::endl;
 
         return "void";
     }
     else if(node->type == "Array assignment")
     {
-        auto lhs = TraverseTreeSemantic(ST, node->children.front());
-        auto idx = TraverseTreeSemantic(ST, *(std::next(node->children.begin())));
-        auto rhs = TraverseTreeSemantic(ST, node->children.back());
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string idx = TraverseTreeSemantic(ST, *(std::next(node->children.begin())));
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
 
         if(lhs != "int[]")
-            std::cout << "Error: the type of the expression must be an int array but is a " << lhs << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". the type of the expression must be an int array but is a " << lhs << std::endl;
         else if(idx != "int")
-            std::cout << "Error: Cannot convert " << idx << " to a integer. Idx for the int array must be an int" <<  std::endl;
+            std::cerr << "@error at line " << (*(std::next(node->children.begin())))->lineno <<
+                      ". the type of the expression must be an int but is a " << idx << std::endl;
         else if(rhs != "int")
-            std::cout << "Error: Cannot convert " << rhs << " to a integer" <<  std::endl;
+            std::cerr << "@error at line " << node->children.back()->lineno <<
+                      ". Cannot convert " << rhs << " to a integer" <<  std::endl;
+
+        return "void";
+    }
+    else if(node->type == "Print")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+
+        if (lhs != "int" && lhs != "bool")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Cannot convert " << lhs << " to an int" << endl;
 
         return "void";
     }
     else if(node->type == "or expression" || node->type == "and expression")
     {
-        auto lhs = TraverseTreeSemantic(ST, node->children.front());
-        auto rhs = TraverseTreeSemantic(ST, node->children.back());
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
 
         if(lhs != "bool" || rhs != "bool")
-            std::cout << "Error: unsupported operands for 'or' or 'and' expression. Can't convert " << lhs << " or "
-            << rhs << " to a bool" << std::endl;
-
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". unsupported operands for 'or' or 'and' expression. Can't convert " << lhs << " or "
+                                                                             << rhs << " to a bool" << std::endl;
         return "bool";
     }
     else if(node->type == "EQ expression")
     {
-        auto lhs = TraverseTreeSemantic(ST, node->children.front());
-        auto rhs = TraverseTreeSemantic(ST, node->children.back());
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
 
         if(lhs != rhs)
-            std::cout << "Error: == requires that both types are the same." << lhs << " and " << rhs << " is not" << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". == requires that both types are the same." << lhs << " and " << rhs << " is not" << std::endl;
 
         return "bool";
     }
     else if(node->type == "LT expression" || node->type == "GT expression")
     {
-        auto lhs = TraverseTreeSemantic(ST, node->children.front());
-        auto rhs = TraverseTreeSemantic(ST, node->children.back());
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
 
         if(lhs != "int" || rhs != "int")
-            std::cout << "Error: Cannot convert " << lhs << " or " << rhs << " to an int for LT or GT" << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Cannot convert " << lhs << " or " << rhs << " to an int for LT or GT" << std::endl;
 
         return "bool";
     }
     else if(node->type == "Add expression" || node->type == "Sub expression" || node->type == "Mul expression" ||
             node->type == "Div expression")
     {
-        auto lhs = TraverseTreeSemantic(ST, node->children.front());
-        auto rhs = TraverseTreeSemantic(ST, node->children.back());
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
 
         if(lhs != "int" || rhs != "int")
-            std::cout << "Error: Unsupported operand type for +, -, * or /. Cannot convert to an int: " << lhs <<
-            " or " << rhs << std::endl;
-
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Unsupported operand type for +, -, * or /. Cannot convert to an int: " << lhs <<
+                                                                             " or " << rhs << std::endl;
         return "int";
     }
     else if(node->type == "Not expression")
     {
-        auto lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
 
         if(lhs != "bool")
-            std::cout << "Error: Unsupported operand type for !: " << lhs << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Unsupported operand type for !: " << lhs << std::endl;
 
         return "bool";
     }
@@ -160,39 +179,36 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         return TraverseTreeSemantic(ST, node->children.front());
     else if(node->type == "Array access")
     {
-        auto lhs = TraverseTreeSemantic(ST, node->children.front());
-        auto idx = TraverseTreeSemantic(ST, node->children.back());
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string idx = TraverseTreeSemantic(ST, node->children.back());
 
         if(lhs != "int[]")
-            std::cout << "Error: Type must be an array but is a " << lhs << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Type must be an array but is a " << lhs << std::endl;
         else if(idx != "int")
-            std::cout << "Error: Type must be an int but is a " << idx << std::endl;
+            std::cerr << "@error at line " << node->children.back()->lineno <<
+                      ". Type must be an int but is a " << idx << std::endl;
 
         return "int";
     }
     else if(node->type == "Method call") {
-        auto callerSymbol = TraverseTreeSemantic(ST, node->children.front());
-        auto callerClass = (Class*)ST->Lookup((ST->Lookup(callerSymbol))->GetType());
+        std::string callerType = TraverseTreeSemantic(ST, node->children.front());
+        Symbol* callerSymbol = ST->Lookup(callerType);
+        Class* callerClass = (Class*)ST->Lookup(callerSymbol->GetType());
 
-
-        auto caller = TraverseTreeSemantic(ST, node->children.front());
-        auto callerRecord = ST->Lookup(caller);
-
-        if(callerClass != (Class*)ST->Lookup(callerRecord->GetType()))
-            std::cout << "WRONG" << std::endl;
-
-        //auto callerClass = (Class*)ST->Lookup(callerRecord->GetType());
         if (callerClass == nullptr) {
-            cout << "Error: Method " << (*(++node->children.begin()))->value << " is not defined on instance of type " << callerRecord->GetType() << endl;
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Method " << (*(++node->children.begin()))->value << " is not defined on instance of type " << callerSymbol->GetType() << endl;
             return "void";
         }
 
         auto childIter = std::next(node->children.begin());
-        auto method = callerClass->MethodLookup((*childIter)->value);
+        Method* method = callerClass->MethodLookup((*childIter)->value);
 
         if(method == nullptr)
         {
-            std::cout << "Error: method " << (*childIter)->value << " is not defined instance " << node->children.front()->value << std::endl;
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Method " << (*childIter)->value << " is not defined instance " << node->children.front()->value << std::endl;
             return "void";
         }
 
@@ -202,20 +218,23 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         {
             if (method->GetNumberParameters() != 0)
             {
-                std::cout << "Error: method expects 0 arguments. 1 or more were provided for " << method->GetId() << std::endl;
+                std::cerr << "@error at line " << node->lineno <<
+                          ". Method expects 0 arguments. 1 or more were provided for " << method->GetId() << std::endl;
                 return "void";
             }
         }
         else if (method->GetNumberParameters() != (*childIter)->children.size()) {
-            std::cout << "Error: incorrect number of arguments for method " << method->GetId() << std::endl;
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Incorrect number of arguments for method " << method->GetId() << std::endl;
             return "void";
         } else {
             int idx = 0;
-            for(auto & child : (*childIter)->children)
+            for(Node*& child : (*childIter)->children)
             {
-                auto type = TraverseTreeSemantic(ST, child);
+                std::string type = TraverseTreeSemantic(ST, child);
                 if (type != method->GetParameter(idx)->GetType()) {
-                    std::cout << "Error: type of argument" << type <<" for method call " << method->GetId() << "differs from requested type, " << method->GetParameter(idx)->GetType() << std::endl;
+                    std::cerr << "@error at line " << node->lineno <<
+                              ". Type of argument" << type <<" for method call " << method->GetId() << "differs from requested type, " << method->GetParameter(idx)->GetType() << std::endl;
                     return "void";
                 }
                 idx++;
@@ -228,7 +247,8 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         auto lhs = TraverseTreeSemantic(ST, node->children.front());
 
         if(lhs != "int[]")
-            std::cout << "Error: " << lhs << " does not have a field length." << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". " << lhs << " does not have a field length." << std::endl;
 
         return "int";
     }
@@ -237,7 +257,8 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         auto lhs = TraverseTreeSemantic(ST, node->children.front());
 
         if(lhs != "int")
-            std::cout << "Error: Cannot convert " << lhs << " to an int" << std::endl;
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Cannot convert " << lhs << " to an int" << std::endl;
 
         return "int[]";
     }
@@ -245,12 +266,13 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         return (*node->children.begin())->value;
     else if(node->type == "ID" || node->type == "THIS")
     {
-        auto idPtr = ST->Lookup(node->value);
+        Variable* idPtr = ST->VarLookup(node->value);
 
         if(idPtr == nullptr)
         {
-            std::cout << "Error: identifier " << node->value << " is not defined" << std::endl;
-            return "void";
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Identifier " << node->value << " is not defined" << std::endl;
+            return "-";
         }
 
         return idPtr->GetType();

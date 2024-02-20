@@ -35,6 +35,7 @@ public:
     Method(const std::string& name, const std::string& type);
     void AddParameter(Variable* var);
     Variable* GetParameter(const int idx);
+    Variable* ParamLookup(const std::string& name);
     int GetNumberParameters();
 };
 
@@ -46,7 +47,9 @@ private:
 public:
     Class(const std::string& name, const std::string& type);
     void AddMethod(Method* method);
+    void AddVariable(Variable* variable);
     Method* MethodLookup(const std::string& name);
+    Variable* VarLookup(const std::string& name);
 };
 
 class Scope {
@@ -55,16 +58,19 @@ private:
     Scope* parentScope;
     std::vector<Scope*> childScopes;
     std::unordered_map<std::string, Symbol*> entries;
+    std::unordered_map<std::string, Variable*> varEntries;
     std::string scopeName;
     Symbol* scopeSymbol;
 
 public:
     Scope(Scope* parent, const std::string& name, Symbol* symbol);
     void Add(const std::string& id, Symbol* entry);
+    void AddVar(const std::string& id, Variable* entry);
     Symbol* GetScopeSymbol();
     Scope* Parent();
     Scope* NextChild(const std::string& name, Symbol* symbol);
     Symbol* Lookup(const std::string& key);
+    Variable* VarLookup(const std::string& key);
     void ResetScope();
     void PrintScope(int& count, ofstream* oStream);
 };
@@ -79,7 +85,9 @@ public:
     void EnterScope(const std::string& name, Symbol* symbol);
     void ExitScope();
     void Add(const std::string& id, Symbol* entry);
+    void AddVar(const std::string& id, Variable* entry);
     Symbol* Lookup(const std::string& key);
+    Variable* VarLookup(const std::string& key);
     Scope* GetCurrentScope();
     void ResetTable();
     void PrintTable();

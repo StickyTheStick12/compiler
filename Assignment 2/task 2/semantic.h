@@ -5,6 +5,4 @@
 
 std::string TraverseTreeSemantic(SymbolTable* ST, Node* node);
 
-int Semantic_analysis(SymbolTable* ST, Node* root);
-
 #endif

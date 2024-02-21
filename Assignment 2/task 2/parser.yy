@@ -144,10 +144,11 @@ MethodDeclaration:
 
 MethodBody:
   LBRACE RETURN Expression SC RBRACE {
-    $$ = $3;
+    $$ = new Node("Method body", "", $3->lineno);
+    $$->children.push_back($3);
   }
   | LBRACE MethodList RETURN Expression SC RBRACE {
-    $$ = new Node("Method body", "", yylineno);
+    $$ = new Node("Method body", "", $4->lineno);
     $$->children.push_back($2);
     $$->children.push_back($4);
   };
@@ -360,11 +361,11 @@ PrimaryExpression:
 
 commaExpression:
     Expression {
-        $$ = $1;
-    }
-    | commaExpression COMMA Expression {
         $$ = new Node("Parameter", "", yylineno);
         $$->children.push_back($1);
+    }
+    | commaExpression COMMA Expression {
+        $$ = $1;
         $$->children.push_back($3);
     };
 

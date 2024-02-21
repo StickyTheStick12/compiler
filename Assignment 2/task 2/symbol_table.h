@@ -24,6 +24,10 @@ public:
 class Variable : public Symbol {
 public:
     Variable(const std::string& name, const std::string& type);
+    bool IsDefined();
+
+private:
+    bool isDefined;
 };
 
 class Method : public Symbol {
@@ -71,6 +75,7 @@ public:
     Scope* NextChild(const std::string& name, Symbol* symbol);
     Symbol* Lookup(const std::string& key);
     Variable* VarLookup(const std::string& key);
+    Variable* VarLookupCurScope(const std::string& key);
     void ResetScope();
     void PrintScope(int& count, ofstream* oStream);
 };
@@ -88,6 +93,7 @@ public:
     void AddVar(const std::string& id, Variable* entry);
     Symbol* Lookup(const std::string& key);
     Variable* VarLookup(const std::string& key);
+    Variable* VarLookupCurScope(const std::string& key);
     Scope* GetCurrentScope();
     void ResetTable();
     void PrintTable();

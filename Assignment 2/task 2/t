@@ -1,263 +1,298 @@
-#include "symbol_table.h"
+#include "semantic.h"
 
-Symbol::Symbol(const std::string& id, const std::string& type, const std::string& symbol)
-{
-    this->id = id;
-    this->type = type;
-    this->symbol = symbol;
-}
-
-std::string Symbol::GetId() {
-    return id;
-}
-
-std::string Symbol::GetType() {
-    return type;
-}
-
-std::string Symbol::PrintEntry() {
-    return "name " + id + "; symbol " + symbol + "; type " + type;
-}
-
-Variable::Variable(const std::string& name, const std::string& type) : Symbol(name, type, "Variable") {}
-
-Method::Method(const std::string& name, const std::string& type) : Symbol(name, type, "Method") {}
-
-void Method::AddParameter(Variable* var) {
-    parameters.push_back(var);
-}
-
-Variable* Method::GetParameter(const int idx) {
-    return parameters[idx];
-}
-
-int Method::GetNumberParameters() {
-    return parameters.size();
-}
-
-Class::Class(const std::string& name, const std::string& type) : Symbol(name, type, "Class") {}
-
-void Class::AddMethod(Method* method) {
-    methods[method->GetId()] = method;
-}
-
-void Class::AddVariable(Variable* variable)
-{
-    variables[variable->GetId()] = variable;
-}
-
-Method* Class::MethodLookup(const std::string& name)
-{
-    auto iter = methods.find(name);
-
-    if(iter != methods.end())
-        return iter->second;
-
-    return nullptr;
-}
-
-Scope::Scope(Scope* parent, const std::string& name, Symbol* symbol) {
-    parentScope = parent;
-    scopeName = name;
-    scopeSymbol = symbol;
-}
-
-void Scope::Add(const std::string& id, Symbol* entry) {
-    entries[id] = entry;
-}
-
-Symbol* Scope::GetScopeSymbol() {
-    return scopeSymbol;
-}
-
-Scope* Scope::Parent() {
-    return parentScope;
-}
-
-Scope* Scope::NextChild(const std::string& name, Symbol* symbol)
-{
-    Scope* nextChild;
-
-    if(next == childScopes.size())
-    {
-        nextChild = new Scope(this, name, symbol);
-        childScopes.push_back(nextChild);
-    }
-    else
-        nextChild = childScopes[next];
-
-    next++;
-
-    return nextChild;
-}
-
-Symbol* Scope::Lookup(const std::string& key)
-{
-    auto iter = entries.find(key);
-
-    if(iter != entries.end())
-        return iter->second;
-
-    if(parentScope == nullptr)
-        return nullptr;
-
-    return parentScope->Lookup(key);
-}
-
-void Scope::ResetScope() {
-    next = 0;
-
-    for(auto & childScope : childScopes)
-        childScope->ResetScope();
-}
-
-void Scope::PrintScope(int& num, ofstream* oStream) {
-
-    *oStream << "n" << num << " [label=\"Symbol table: ("<< scopeName << ")\\n";
-
-    for(auto & entry : entries)
-        *oStream << entries[entry.first]->PrintEntry() << "\\n";
-
-    *oStream << "\"];" << endl;
-
-    int id = num;
-
-    for(auto & childScope : childScopes)
-    {
-        int n = ++num;
-        childScope->PrintScope(num, oStream);
-        *oStream << "n" << id << " -> n" << n << endl;
-    }
-}
-
-SymbolTable::SymbolTable() {
-    root = new Scope(nullptr, "Program", nullptr);
-    currentScope = root;
-}
-
-void SymbolTable::EnterScope(const std::string& name, Symbol* symbol)
-{
-    currentScope = currentScope->NextChild(name, symbol);
-}
-
-void SymbolTable::ExitScope() {
-    currentScope = currentScope->Parent();
-}
-
-void SymbolTable::Add(const std::string& id, Symbol* entry) {
-    currentScope->Add(id, entry);
-}
-
-Symbol* SymbolTable::Lookup(const std::string& key) {
-    return currentScope->Lookup(key);
-}
-
-Scope* SymbolTable::GetCurrentScope() {
-    return currentScope;
-}
-
-void SymbolTable::PrintTable()
-{
-    std::ofstream oStream;
-    oStream.open("ST.dot");
-
-    int num = 0;
-    oStream << "digraph {" << std::endl;
-    root->PrintScope(num, &oStream);
-    oStream << "}" << std::endl;
-    oStream.close();
-
-    std::cout << "Built a symbol-tree at ST.dot. Use 'make st' to generate the pdf version." << std::endl;
-}
-
-void SymbolTable::ResetTable() {
-    root->ResetScope();
-}
-
-void TraverseTree(Node* node, SymbolTable* ST)
+std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
 {
     if(node->type == "Program")
     {
-        for(auto iter : node->children)
+        for(auto & iter : node->children)
         {
-            if(ST->Lookup(iter->value) != nullptr)
-                std::cerr << "@error at line " << iter->lineno <<
-                          ". A class with name '" << iter->value << "' already exists" << std::endl;
-                //std::cerr << "@error at line " << (iter->children.front()->children.front()->lineno - 1) <<
-                          //". A class with name '" << iter->value << "' already exists" << std::endl;
-
-            auto nClass = new Class(iter->value, iter->value);
-            ST->Add(iter->value, nClass);
-            ST->EnterScope("Class: " + iter->value, nClass);
-            TraverseTree(iter, ST);
+            ST->EnterScope("", nullptr);
+            TraverseTreeSemantic(ST, iter);
             ST->ExitScope();
         }
+        return "void";
     }
-    else if(node->type == "Class")
+    else if(node->type == "Class" || node->type == "Class body" || node->type == "Method statement" || node->type == "Statements" || node->type == "Main class statement" || node->type == "MethodList" || node->type == "Class variables" )
     {
-        //the type will be the class name
-        ((Class*)ST->GetCurrentScope()->GetScopeSymbol())->AddVariable(new Variable("this", node->value));
-
         for(auto & iter : node->children)
-            TraverseTree(iter, ST);
+            TraverseTreeSemantic(ST, iter);
+
+        return "void";
     }
     else if(node->type == "Main Class")
     {
-        //the type will be the class name
-        ((Class*)ST->GetCurrentScope()->GetScopeSymbol())->AddVariable(new Variable("this", node->value));
-        ((Class*)ST->GetCurrentScope()->GetScopeSymbol())->AddMethod(new Method("main", "void"));
-        ST->EnterScope("Method: main", nullptr);
-        ((Method*)ST->GetCurrentScope()->GetScopeSymbol())->AddParameter(new Method(node->children.front()->value, "String[]"));
+        ST->EnterScope("", nullptr);
+        for(auto iter = std::next(node->children.begin()); iter != node->children.end(); ++iter)
+            TraverseTreeSemantic(ST, *iter);
 
         ST->ExitScope();
-    }
-    else if(node->type == "Class body" || node->type == "Class variables" || node->type == "Method" ||
-            node->type == "Method body" || node->type == "Method variables" || node->type == "Main class statement" ||
-            node->type == "MethodList" || node->type == "Method statement")
-    {
-        for(auto & iter : node->children)
-            TraverseTree(iter, ST);
+        return "void";
     }
     else if(node->type == "MethodDecList")
     {
-        for(auto & iter : node->children)
-        {
-
-
-            if(((Class*)ST->GetCurrentScope()->GetScopeSymbol())->MethodLookup(iter->value) != nullptr)
-                std::cerr << "@error at line " << iter->lineno <<
-                          ". A method with name '" << iter->value << "' already exists" << std::endl;
-            auto nMethod = new Method(iter->value, (*iter->children.front()).value);
-
-            ((Class*)ST->GetCurrentScope()->GetScopeSymbol())->AddMethod(nMethod);
-
-            ST->EnterScope("Method: " + iter->value, nMethod);
-            TraverseTree(iter, ST);
+        for(auto & iter : node->children) {
+            ST->EnterScope("", nullptr);
+            TraverseTreeSemantic(ST, iter);
             ST->ExitScope();
         }
+
+        return "void";
     }
-    else if (node->type == "Variable") {
+    else if(node->type == "Method")
+    {
+        for(auto iter = node->children.begin(); iter != std::prev(node->children.end()); ++iter)
+            TraverseTreeSemantic(ST, *iter);
+
+        std::string returnType = TraverseTreeSemantic(ST, node->children.back());
+
+        if(node->children.front()->value != returnType)
+            std::cerr << "@error at line " << node->children.back()->lineno <<
+            ". Return type of method doesnt match type of returned value. Cannot convert "<< returnType <<
+            " to " << node->children.front()->value << "  " << std::endl;
+
+        return node->children.front()->value;
+    }
+    else if(node->type == "Method body")
+    {
+        for(auto iter = node->children.begin(); iter != std::prev(node->children.end()); ++iter)
+            TraverseTreeSemantic(ST, *iter);
+
+        return TraverseTreeSemantic(ST, node->children.back());
+    }
+    else if(node->type == "If statement" || node->type == "If else" || node->type == "While loop")
+    {
+        for(auto iter = std::next(node->children.begin()); iter != node->children.end(); ++iter)
+            TraverseTreeSemantic(ST, *iter);
+
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+
+        if(lhs != "bool")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". If and while require a bool. Cannot convert " << lhs << " to a bool" << std::endl;
+
+        return "void";
+    }
+    else if(node->type == "Assignment")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+
+        if(lhs == "-")
+            return "void";
+
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
+
+        if(rhs == "-")
+            return "void";
+
+        if(lhs != rhs)
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". " << lhs << " type does not match with " << rhs << " type" << std::endl;
+
+        return "void";
+    }
+    else if(node->type == "Array assignment")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string idx = TraverseTreeSemantic(ST, *(std::next(node->children.begin())));
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
+
+        if(lhs != "int[]")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". the type of the expression must be an int array but is a " << lhs << std::endl;
+        else if(idx != "int")
+            std::cerr << "@error at line " << (*(std::next(node->children.begin())))->lineno <<
+                      ". the type of the expression must be an int but is a " << idx << std::endl;
+        else if(rhs != "int")
+            std::cerr << "@error at line " << node->children.back()->lineno <<
+                      ". Cannot convert " << rhs << " to a integer" <<  std::endl;
+
+        return "void";
+    }
+    else if(node->type == "Print")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+
+        if (lhs != "int" && lhs != "bool")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Cannot convert " << lhs << " to an int" << endl;
+
+        return "void";
+    }
+    else if(node->type == "or expression" || node->type == "and expression")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
+
+        if(lhs != "bool" || rhs != "bool")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". unsupported operands for 'or' or 'and' expression. Can't convert " << lhs << " or "
+                                                                             << rhs << " to a bool" << std::endl;
+        return "bool";
+    }
+    else if(node->type == "EQ expression")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
+
+        if(lhs != rhs)
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". == requires that both types are the same." << lhs << " and " << rhs << " is not" << std::endl;
+
+        return "bool";
+    }
+    else if(node->type == "LT expression" || node->type == "GT expression")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
+
+        if(lhs != "int" || rhs != "int")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Cannot convert " << lhs << " or " << rhs << " to an int for LT or GT" << std::endl;
+
+        return "bool";
+    }
+    else if(node->type == "Add expression" || node->type == "Sub expression" || node->type == "Mul expression" ||
+            node->type == "Div expression")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string rhs = TraverseTreeSemantic(ST, node->children.back());
+
+        if(lhs != "int" || rhs != "int")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Unsupported operand type for +, -, * or /. Cannot convert to an int: " << lhs <<
+                                                                             " or " << rhs << std::endl;
+        return "int";
+    }
+    else if(node->type == "Not expression")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+
+        if(lhs != "bool")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Unsupported operand type for !: " << lhs << std::endl;
+
+        return "bool";
+    }
+    else if(node->type == "(Expression)" || node->type == "Object instantiation")
+        return TraverseTreeSemantic(ST, node->children.front());
+    else if(node->type == "Array access")
+    {
+        std::string lhs = TraverseTreeSemantic(ST, node->children.front());
+        std::string idx = TraverseTreeSemantic(ST, node->children.back());
+
+        if(lhs != "int[]")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Type must be an array but is a " << lhs << std::endl;
+        else if(idx != "int")
+            std::cerr << "@error at line " << node->children.back()->lineno <<
+                      ". Type must be an int but is a " << idx << std::endl;
+
+        return "int";
+    }
+    else if(node->type == "Method call") {
+        std::string callerType = TraverseTreeSemantic(ST, node->children.front());
+        Class* callerClass = ST->ClassLookup(callerType);
+
+        if (callerClass == nullptr) {
+            callerClass = ST->ClassLookup(node->children.front()->children.front()->value);
+
+            if(callerClass == nullptr)
+            {
+                std::cerr << "@error at line " << node->lineno <<
+                          ". Method " << (*(++node->children.begin()))->value << " is not defined on instance of type " << node->children.front()->value << endl;
+                return "-";
+            }
+        }
+
+        auto childIter = std::next(node->children.begin());
+        Method* method = callerClass->MethodLookup((*childIter)->value);
+
+        if(method == nullptr)
+        {
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Method " << (*childIter)->value << " is not defined instance " << node->children.front()->value << std::endl;
+            return "-";
+        }
+
+        childIter = std::next(childIter);
+
+        if (childIter == node->children.end())
+        {
+            if (method->GetNumberParameters() != 0)
+            {
+                std::cerr << "@error at line " << node->lineno <<
+                          ". Method expects 1 or more arguments. 0 were provided for " << method->GetId() << std::endl;
+            }
+        }
+        else if (method->GetNumberParameters() != (*childIter)->children.size()) {
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Incorrect number of arguments for method " << method->GetId() << std::endl;
+        } else {
+            int idx = 0;
+            for(Node*& child : (*childIter)->children)
+            {
+                std::string type = TraverseTreeSemantic(ST, child);
+                if (type != method->GetParameter(idx)->GetType()) {
+                    std::cerr << "@error at line " << node->lineno <<
+                              ". Type of argument" << type <<" for method call " << method->GetId() << "differs from requested type, " << method->GetParameter(idx)->GetType() << std::endl;
+                }
+                idx++;
+            }
+        }
+
+        return method->GetType();
+    }
+    else if(node->type == "Expression.Length")
+    {
+        auto lhs = TraverseTreeSemantic(ST, node->children.front());
+
+        if(lhs != "int[]")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". " << lhs << " does not have a field length." << std::endl;
+
+        return "int";
+    }
+    else if(node->type == "New int[] expression")
+    {
+        auto lhs = TraverseTreeSemantic(ST, node->children.front());
+
+        if(lhs != "int")
+            std::cerr << "@error at line " << node->children.front()->lineno <<
+                      ". Cannot convert " << lhs << " to an int" << std::endl;
+
+        return "int[]";
+    }
+    else if(node->type == "Variable")
+    {
         Node* type = *node->children.begin();
         Node* name = *std::prev(node->children.end());
 
-        if(ST->GetCurrentScope()->Parent() == nullptr)
-            
-
-        if (ST->Lookup(name->value) != nullptr)
+        if(type->value != "int" && type->value != "bool" && type->value != "int[]" && ST->ClassLookup(type->value) == nullptr)
             std::cerr << "@error at line " << node->lineno <<
-                      ". A variable with name '" << name->value << "' already exists" << std::endl;
+                      ". Type of variable " << name->value << " doesnt exist" << std::endl;
 
-        ST->Add(name->value, new Variable(name->value, type->value));
+        return (*node->children.begin())->value;
     }
-    else if(node->type == "Method parameters")
+    else if(node->type == "ID" || node->type == "THIS")
     {
-        for(auto & child : node->children)
-        {
-            TraverseTree(child, ST);
-            Node* name = *(std::prev(child->children.end()));
+        Variable* varPtr = ST->VarLookup(node->value);
+        Symbol* methodPtr = ST->ClassLookup(node->value);
 
-            auto new_param = (Variable*)ST->Lookup(name->value);
-            ((Method*)ST->GetCurrentScope()->GetScopeSymbol())->AddParameter(new_param);
+        if(varPtr == nullptr)
+
+        if(varPtr == nullptr && methodPtr == nullptr)
+        {
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Identifier " << node->value << " is not defined" << std::endl;
+            return "-";
         }
+
+        return (varPtr == nullptr) ? methodPtr->GetType() : varPtr->GetType();
     }
+    else if(node->type == "Int")
+        return "int";
+    else if(node->type == "TRUE" || node->type == "FALSE")
+        return "bool";
+
+    return node->value;
 }

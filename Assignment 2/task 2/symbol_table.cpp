@@ -21,6 +21,10 @@ std::string Symbol::PrintEntry() {
 
 Variable::Variable(const std::string& name, const std::string& type) : Symbol(name, type, "Variable") {}
 
+bool Variable::IsDefined() {
+    return isDefined;
+}
+
 Method::Method(const std::string& name, const std::string& type) : Symbol(name, type, "Method") {}
 
 void Method::AddParameter(Variable* var) {
@@ -121,6 +125,16 @@ Variable* Scope::VarLookup(const std::string& key)
     return parentScope->VarLookup(key);
 }
 
+Variable* Scope::VarLookupCurScope(const std::string& key)
+{
+    auto iter = varEntries.find(key);
+
+    if(iter != varEntries.end())
+        return iter->second;
+
+    return nullptr;
+}
+
 void Scope::ResetScope() {
     next = 0;
 
@@ -177,6 +191,10 @@ Variable* SymbolTable::VarLookup(const std::string& key) {
     return currentScope->VarLookup(key);
 }
 
+Variable* SymbolTable::VarLookupCurScope(const std::string& key) {
+    return currentScope->VarLookupCurScope(key);
+}
+
 Scope* SymbolTable::GetCurrentScope() {
     return currentScope;
 }
@@ -212,6 +230,7 @@ void TraverseTree(Node* node, SymbolTable* ST)
                           //". A class with name '" << iter->value << "' already exists" << std::endl;
 
             auto nClass = new Class(iter->value, iter->value);
+
             ST->Add(iter->value, nClass);
             ST->EnterScope("Class: " + iter->value, nClass);
             TraverseTree(iter, ST);
@@ -221,7 +240,7 @@ void TraverseTree(Node* node, SymbolTable* ST)
     else if(node->type == "Class")
     {
         //the type will be the class name
-        ST->Add("this", new Variable("this", node->value));
+        ST->AddVar("this", new Variable("this", node->value));
 
         for(auto & iter : node->children)
             TraverseTree(iter, ST);
@@ -251,6 +270,8 @@ void TraverseTree(Node* node, SymbolTable* ST)
                           ". A method with name '" << iter->value << "' already exists" << std::endl;
             auto nMethod = new Method(iter->value, (*iter->children.front()).value);
 
+            ((Class*)ST->GetCurrentScope()->GetScopeSymbol())->AddMethod(nMethod);
+
             ST->Add(iter->value, nMethod);
 
             ST->EnterScope("Method: " + iter->value, nMethod);
@@ -262,7 +283,7 @@ void TraverseTree(Node* node, SymbolTable* ST)
         Node* type = *node->children.begin();
         Node* name = *std::prev(node->children.end());
 
-        if (ST->VarLookup(name->value) != nullptr)
+        if (ST->VarLookupCurScope(name->value) != nullptr)
             std::cerr << "@error at line " << node->lineno <<
                   ". A variable with name '" << name->value << "' already exists" << std::endl;
 
@@ -278,5 +299,11 @@ void TraverseTree(Node* node, SymbolTable* ST)
             Variable* new_param = ST->VarLookup(name->value);
             ((Method*)ST->GetCurrentScope()->GetScopeSymbol())->AddParameter(new_param);
         }
+    }
+    else if(node->type == "Assignment")
+    {
+        if (ST->VarLookup(node->children.front()->value) == nullptr)
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Variable with name '" << node->children.front()->value << "' doesnt exists before assignment" << std::endl;
     }
 }

@@ -1,7 +1,5 @@
 #include "semantic.h"
 
-//todo fix so we dont generate multiple errors on the same line
-
 std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
 {
     if(node->type == "Program")
@@ -48,7 +46,7 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         std::string returnType = TraverseTreeSemantic(ST, node->children.back());
 
         if(node->children.front()->value != returnType)
-            std::cerr << "@error at line " << node->children.front()->lineno <<
+            std::cerr << "@error at line " << node->children.back()->lineno <<
             ". Return type of method doesnt match type of returned value. Cannot convert "<< returnType <<
             " to " << node->children.front()->value << "  " << std::endl;
 
@@ -78,12 +76,12 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
     {
         std::string lhs = TraverseTreeSemantic(ST, node->children.front());
 
-        if(lhs == "void")
+        if(lhs == "-")
             return "void";
 
         std::string rhs = TraverseTreeSemantic(ST, node->children.back());
 
-        if(rhs == "void")
+        if(rhs == "-")
             return "void";
 
         if(lhs != rhs)
@@ -194,12 +192,20 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
     else if(node->type == "Method call") {
         std::string callerType = TraverseTreeSemantic(ST, node->children.front());
         Symbol* callerSymbol = ST->Lookup(callerType);
+
+        if (callerSymbol == nullptr) {
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Method " << (*(++node->children.begin()))->value << " is not defined on instance of type " << callerType << endl;
+            return "-";
+        }
+
         Class* callerClass = (Class*)ST->Lookup(callerSymbol->GetType());
+
 
         if (callerClass == nullptr) {
             std::cerr << "@error at line " << node->lineno <<
                       ". Method " << (*(++node->children.begin()))->value << " is not defined on instance of type " << callerSymbol->GetType() << endl;
-            return "void";
+            return "-";
         }
 
         auto childIter = std::next(node->children.begin());
@@ -209,7 +215,7 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         {
             std::cerr << "@error at line " << node->lineno <<
                       ". Method " << (*childIter)->value << " is not defined instance " << node->children.front()->value << std::endl;
-            return "void";
+            return "-";
         }
 
         childIter = std::next(childIter);
@@ -219,14 +225,12 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
             if (method->GetNumberParameters() != 0)
             {
                 std::cerr << "@error at line " << node->lineno <<
-                          ". Method expects 0 arguments. 1 or more were provided for " << method->GetId() << std::endl;
-                return "void";
+                          ". Method expects 1 or more arguments. 0 were provided for " << method->GetId() << std::endl;
             }
         }
         else if (method->GetNumberParameters() != (*childIter)->children.size()) {
             std::cerr << "@error at line " << node->lineno <<
                       ". Incorrect number of arguments for method " << method->GetId() << std::endl;
-            return "void";
         } else {
             int idx = 0;
             for(Node*& child : (*childIter)->children)
@@ -235,11 +239,11 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
                 if (type != method->GetParameter(idx)->GetType()) {
                     std::cerr << "@error at line " << node->lineno <<
                               ". Type of argument" << type <<" for method call " << method->GetId() << "differs from requested type, " << method->GetParameter(idx)->GetType() << std::endl;
-                    return "void";
                 }
                 idx++;
             }
         }
+
         return method->GetType();
     }
     else if(node->type == "Expression.Length")
@@ -263,19 +267,29 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         return "int[]";
     }
     else if(node->type == "Variable")
+    {
+        Node* type = *node->children.begin();
+        Node* name = *std::prev(node->children.end());
+
+        if(type->value != "int" && type->value != "bool" && type->value != "int[]" && ST->Lookup(type->value) == nullptr)
+            std::cerr << "@error at line " << node->lineno <<
+                      ". Type of variable " << name->value << " doesnt exist" << std::endl;
+
         return (*node->children.begin())->value;
+    }
     else if(node->type == "ID" || node->type == "THIS")
     {
-        Variable* idPtr = ST->VarLookup(node->value);
+        Variable* varPtr = ST->VarLookup(node->value);
+        Symbol* idPtr = ST->Lookup(node->value);
 
-        if(idPtr == nullptr)
+        if(varPtr == nullptr && idPtr == nullptr)
         {
             std::cerr << "@error at line " << node->lineno <<
                       ". Identifier " << node->value << " is not defined" << std::endl;
             return "-";
         }
 
-        return idPtr->GetType();
+        return (varPtr == nullptr) ? idPtr->GetType() : varPtr->GetType();
     }
     else if(node->type == "Int")
         return "int";

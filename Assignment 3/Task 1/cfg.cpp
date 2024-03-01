@@ -254,7 +254,7 @@ std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
         ST->AddVar(name, new Variable(name, ""));
         auto child = node->children.begin();
         std::string caller = TraverseTreeTac(ST, *child);
-        Tac* callerTac = new Param(caller);
+        Tac* callerTac = new Parameter(caller);
         currentBlock->tacInstructions.push_back(callerTac);
         child = std::next(child);
         std::string methodName = (*child)->value;
@@ -298,7 +298,7 @@ std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
     else if (node->type == "Parameter") {
         for(auto& child : node->children) {
             std::string name = TraverseTreeTac(ST, child);
-            Tac* instruction = new Param(name);
+            Tac* instruction = new Parameter(name);
             currentBlock->tacInstructions.push_back(instruction);
         }
         return "";

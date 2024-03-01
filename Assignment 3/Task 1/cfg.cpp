@@ -1,18 +1,20 @@
 #include "cfg.h"
 
+//TODO. fix block for if statement, (Only if, so not if else)
+
 BBlock* currentBlock;
 std::vector<BBlock*> methods;
 std::vector<std::string> renderedBlocks;
 
 std::string BBlock::GenTempName() {
-    return "_temp_" + std::stoi(tempCounter++);
+    return "_temp_" + std::to_string(tempCounter++);
 }
 
 std::string BBlock::GenBlockName() {
-    return "block" + std::stoi(blockCounter++);
+    return "block" + std::to_string(blockCounter++);
 }
 
-std::string TraverseTreeTac(ST* ST, Node* node) {
+std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
     if (node->type == "Method") {
         currentBlock = new BBlock();
         methods.push_back(currentBlock);
@@ -20,15 +22,15 @@ std::string TraverseTreeTac(ST* ST, Node* node) {
     if (node->type == "Method body") {
         std::string name;
         for(auto & child : node->children)
-            name = TraverseTreeTac(ST, child)
+            name = TraverseTreeTac(ST, child);
 
         Tac* ret = new Return(name);
         currentBlock->tacInstructions.push_back(ret);
         return "";
-    } 
-    else if (node->type == "Empty statement") 
+    }
+    else if (node->type == "Empty statement")
         return "";
-    else if (node->type == "IF ELSE") {
+    else if (node->type == "If else") {
         BBlock* trueBlock = new BBlock();
         BBlock* falseBlock = new BBlock();
         BBlock* joinBlock = new BBlock();
@@ -54,294 +56,291 @@ std::string TraverseTreeTac(ST* ST, Node* node) {
         currentBlock = joinBlock;
 
         return "";
-    } 
+    }
     else if (node->type == "While loop") {
-        BBlock* hBlock = new BBlock();
+        BBlock* headerBlock = new BBlock();
         BBlock* trueBlock = new BBlock();
         BBlock* joinBlock = new BBlock();
 
-        currentBlock->trueExit = hBlock;
+        currentBlock->trueExit = headerBlock;
 
         auto child = node->children.begin();
-        currentBlock = hBlock;
+        currentBlock = headerBlock;
         std::string condName = TraverseTreeTac(ST, *child);
         Tac* cond = new CondJump(condName, joinBlock->name);
         currentBlock->tacInstructions.push_back(cond);
-        
+
         child = std::next(child);
         currentBlock = trueBlock;
         TraverseTreeTac(ST, *child);
-        Tac* jmp = new Jump(hBlock->name);
+        Tac* jmp = new Jump(headerBlock->name);
         currentBlock->tacInstructions.push_back(jmp);
-        currentBlock->trueExit = hBlock;
+        currentBlock->trueExit = headerBlock;
 
-        hBlock->trueExit = trueBlock;
-        hBlock->falseExit = joinBlock;
+        headerBlock->trueExit = trueBlock;
+        headerBlock->falseExit = joinBlock;
         currentBlock = joinBlock;
         return "";
-    } 
+    }
     else if (node->type == "Print") {
         Node* child = node->children.front();
         std::string name = TraverseTreeTac(ST, child);
-        Tac* in = new Print(name);
-        currentBlock->tacInstructions.push_back(in);
+        Tac* instruction = new Print(name);
+        currentBlock->tacInstructions.push_back(instruction);
         return "";
-    } 
-    else if (node->type == "Assign") {
+    }
+    else if (node->type == "Assignment") {
         auto child = node->children.begin();
         std::string name = (*child)->value;
         child = std::next(child);
-        std::string rhs_name = TraverseTreeTac(ST, *child);
-        Tac* in = new Copy(rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
-        return name;
-    } 
-    else if (node->type == "Array assign") {
-        auto child = node->children.begin();
-        std::string name = (*child)->value;
-        child = std::next(child);
-        std::string lhs_name = TraverseTreeTac(ST, *child);
-        child = std::next(child);
-        std::string rhs_name = TraverseTreeTac(ST, *child);
-        Tac* in = new CopyArray(lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Copy(rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "|| expression")
+    else if (node->type == "Array Assignment") {
+        auto child = node->children.begin();
+        std::string name = (*child)->value;
+        child = std::next(child);
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new CopyArray(lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
+        return name;
+    }
+    else if (node->type == "or expression")
     {
         std::string name = BBlock::GenTempName();
-        ST->Add(name, new Variable(name, "boolean"));
+        ST->AddVar(name, new Variable(name, "boolean"));
         auto child = node->children.begin();
-        std::string lhs_name = TraverseTreeTac(ST, *child);
+        std::string lhsName = TraverseTreeTac(ST, *child);
         child = std::next(child);
-        string rhs_name = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new Expression("or", lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
-        return name;
-    } 
-    else if (node->type == "&& expression")
-    {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "boolean"));
-        auto child = node->children.begin();
-        string lhs_name = TraverseTreeTac(symbolTable, *child);
-        advance(child, 1);
-        string rhs_name = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new Expression("and", lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Expression("or", lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "== expression")
+    else if (node->type == "and expression")
     {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "boolean"));
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "boolean"));
         auto child = node->children.begin();
-        string lhs_name = TraverseTreeTac(symbolTable, *child);
-        advance(child, 1);
-        string rhs_name = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new Expression("==", lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Expression("and", lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "< expression")
+    else if (node->type == "EQ expression")
     {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "boolean"));
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "boolean"));
         auto child = node->children.begin();
-        string lhs_name = TraverseTreeTac(symbolTable, *child);
-        advance(child, 1);
-        string rhs_name = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new Expression("<", lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Expression("EQ", lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "> expression")
+    else if (node->type == "LT expression")
     {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "boolean"));
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "boolean"));
         auto child = node->children.begin();
-        string lhs_name = TraverseTreeTac(symbolTable, *child);
-        advance(child, 1);
-        string rhs_name = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new Expression(">", lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Expression("LT", lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "- expression") {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "int"));
+    else if (node->type == "GT expression")
+    {
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "boolean"));
         auto child = node->children.begin();
-        string lhs_name = TraverseTreeTac(symbolTable, *child);
-        advance(child, 1);
-        string rhs_name = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new Expression("-", lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Expression("GT", lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "+ expression")
-    {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "int"));
+    else if (node->type == "Sub expression") {
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "int"));
         auto child = node->children.begin();
-        string lhs_name = TraverseTreeTac(symbolTable, *child);
-        advance(child,1);
-        string rhs_name = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new Expression("+", lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Expression("SUB", lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "* expression")
+    else if (node->type == "Add expression")
     {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "int"));
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "int"));
         auto child = node->children.begin();
-        string lhs_name = TraverseTreeTac(symbolTable, *child);
-        advance(child,1);
-        string rhs_name = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new Expression("*", lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Expression("ADD", lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "/ expression")
+    else if (node->type == "Mul expression")
     {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "int"));
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "int"));
         auto child = node->children.begin();
-        string lhs_name = TraverseTreeTac(symbolTable, *child);
-        advance(child,1);
-        string rhs_name = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new Expression("/", lhs_name, rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Expression("MUL", lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "! expression")
+    else if (node->type == "Div expression")
     {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "boolean"));
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "int"));
+        auto child = node->children.begin();
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string rhsName = TraverseTreeTac(ST, *child);
+        Tac* instruction = new Expression("DIV", lhsName, rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
+        return name;
+    }
+    else if (node->type == "Not expression")
+    {
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "boolean"));
         auto child = node->children.front();
-        string rhs_name = TraverseTreeTac(symbolTable, child);
-        Tac* in = new UnaryExpression("!", rhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string rhsName = TraverseTreeTac(ST, child);
+        Tac* instruction = new UnaryExpression("NOT", rhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "true") {
-        return "true";
+    else if (node->type == "TRUE") {
+        return "TRUE";
     }
-    else if (node->type == "false") {
-        return "false";
+    else if (node->type == "FALSE") {
+        return "FALSE";
     }
-    else if (node->type == "this") {
-        return "this";
+    else if (node->type == "THIS") {
+        return "THIS";
     }
     else if (node->type == "(Expression)") {
-        return TraverseTreeTac(symbolTable, node->children.front());
+        return TraverseTreeTac(ST, node->children.front());
     }
     else if (node->type == "Array access") {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "int"));
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "int"));
         auto child = node->children.begin();
-        string lhs_name = TraverseTreeTac(symbolTable, *child);
-        advance(child, 1);
-        string index = TraverseTreeTac(symbolTable, *child);
-        Tac* in = new ArrayAccess(index, lhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lhsName = TraverseTreeTac(ST, *child);
+        child = std::next(child);
+        std::string idx = TraverseTreeTac(ST, *child);
+        Tac* instruction = new ArrayAccess(lhsName, idx, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
     else if (node->type == "Method call") {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, ""));
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, ""));
         auto child = node->children.begin();
-        string caller = TraverseTreeTac(symbolTable, *child);
-        Tac* caller_tac = new Param(caller);
-        currentBlock->tacInstructions.push_back(caller_tac);
-        advance(child, 1);
-        string methodName = (*child)->value;
+        std::string caller = TraverseTreeTac(ST, *child);
+        Tac* callerTac = new Param(caller);
+        currentBlock->tacInstructions.push_back(callerTac);
+        child = std::next(child);
+        std::string methodName = (*child)->value;
         int length = 1;
-        advance(child, 1);
+        child = std::next(child);
         if (child != node->children.end()) {
-            TraverseTreeTac(symbolTable, *child);
+            TraverseTreeTac(ST, *child);
             length = (*child)->children.size() + 1;
         }
-        Tac* in = new MethodCall(methodName,to_string(length),name);
-        currentBlock->tacInstructions.push_back(in);
+        Tac* instruction = new MethodCall(methodName,std::to_string(length),name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "Exp.length") {
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "int"));
+    else if (node->type == "Expression.Length") {
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "int"));
         auto child = node->children.front();
-        string lhs_name = TraverseTreeTac(symbolTable, child);
-        Tac* in = new Length(lhs_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lhsName = TraverseTreeTac(ST, child);
+        Tac* instruction = new Length(lhsName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "new int[] exp") {
+    else if (node->type == "New int[] expression") {
         auto child = node->children.front();
-        string len_name = TraverseTreeTac(symbolTable, child);
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, "int[]"));
-        Tac* in = new NewArray("int[]", len_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string lenName = TraverseTreeTac(ST, child);
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, "int[]"));
+        Tac* instruction = new NewArray("int[]", lenName, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
     else if (node->type == "Object instantiation") {
         auto child = node->children.front();
-        string class_name = TraverseTreeTac(symbolTable, child);
-        string name = BBlock::genTempName();
-        symbolTable->put(name, new Variable(name, class_name));
-        Tac* in = new New(class_name, name);
-        currentBlock->tacInstructions.push_back(in);
+        std::string className = TraverseTreeTac(ST, child);
+        std::string name = BBlock::GenTempName();
+        ST->AddVar(name, new Variable(name, className));
+        Tac* instruction = new New(className, name);
+        currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
-    else if (node->type == "Params") {
-        for(auto i = node->children.begin(); i != node->children.end(); ++i) {
-            string name = TraverseTreeTac(symbolTable, *i);
-            Tac* in = new Param(name);
-            currentBlock->tacInstructions.push_back(in);
+    else if (node->type == "Parameter") {
+        for(auto& child : node->children) {
+            std::string name = TraverseTreeTac(ST, child);
+            Tac* instruction = new Param(name);
+            currentBlock->tacInstructions.push_back(instruction);
         }
         return "";
     }
-    else if (node->type == "ID")
+    else if (node->type == "ID" || node->type == "Int")
     {
         return node->value;
     }
-    else if(node -> type == "Int") {
-        return node->value;
-    }
     else {
-        for (auto i = node->children.begin(); i != node->children.end(); ++i) {
-            TraverseTreeTac(symbolTable, *i);
+        for (auto & child : node->children) {
+            TraverseTreeTac(ST, child);
         }
         return node->value;
     }
 }
 
-void create_block_cfg(BBlock* block, ofstream* outStream) {
+void CreateBlockCfg(BBlock* block, std::ofstream* outStream) {
     *outStream << block->name << " [label=\"" << block->name << "\\n";
     renderedBlocks.push_back(block->name);
-    for (auto i = block->tacInstructions.begin(); i != block->tacInstructions.end(); ++i) {
-        *outStream << (*i)->get_str() << "\\n";
+    for (auto & tacInstruction : block->tacInstructions) {
+        *outStream << tacInstruction->GetStr() << "\\n";
     }
     *outStream << "\"];" << std::endl;
-    if (block->trueExit != NULL) {
-        *outStream << block->name << " -> " << block->trueExit->name << "[xlabel=\"true\"];" << endl;
+    if (block->trueExit != nullptr) {
+        *outStream << block->name << " -> " << block->trueExit->name << "[xlabel=\"true\"];" << std::endl;
         if (find(renderedBlocks.begin(), renderedBlocks.end(), block->trueExit->name) == renderedBlocks.end()) {
-            create_block_cfg(block->trueExit, outStream);
+            CreateBlockCfg(block->trueExit, outStream);
         }
     }
-    if (block->falseExit != NULL) {
-        *outStream << block->name << " -> " << block->falseExit->name << "[xlabel=\"false\"];" << endl;
-        create_block_cfg(block->falseExit, outStream);
+    if (block->falseExit != nullptr) {
+        *outStream << block->name << " -> " << block->falseExit->name << "[xlabel=\"false\"];" << std::endl;
+        CreateBlockCfg(block->falseExit, outStream);
     }
 }
 
-void create_cfg(BBlock* block) {
+void CreateCfg(BBlock* block) {
     std::ofstream outStream;
     outStream.open("cfg.dot");
 
     outStream << "digraph {\ngraph [splines=ortho]\nnode [shape=box]\n";
     for(auto i = methods.begin(); i != methods.end(); ++i) {
-        create_block_cfg(*i, &outStream);
+        CreateBlockCfg(*i, &outStream);
     }
     outStream << "\n}";
     outStream.close();

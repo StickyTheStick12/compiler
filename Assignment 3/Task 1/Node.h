@@ -8,52 +8,52 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-using namespace std;
+//using namespace std;
 
 
 class Node {
 public:
-	int id, lineno;
-	string type, value;
-	list<Node*> children;
-	Node(string t, string v, int l) : type(t), value(v), lineno(l){}
-	Node()
-	{
-		type = "uninitialised";
-		value = "uninitialised"; }   // Bison needs this.
-  
-	void print_tree(int depth=0) {
-		for(int i=0; i<depth; i++)
-		cout << "  ";
-		cout << type << ":" << value << endl; //<< " @line: "<< lineno << endl;
-		for(auto i=children.begin(); i!=children.end(); i++)
-		(*i)->print_tree(depth+1);
-	}
-  
-	void generate_tree() {
-		std::ofstream outStream;
-		char* filename = "tree.dot";
-	  	outStream.open(filename);
+    int id, lineno;
+    std::string type, value;
+    std::list<Node*> children;
+    Node(std::string t, std::string v, int l) : type(t), value(v), lineno(l){}
+    Node()
+    {
+        type = "uninitialised";
+        value = "uninitialised"; }   // Bison needs this.
 
-		int count = 0;
-		outStream << "digraph {" << std::endl;
-		generate_tree_content(count, &outStream);
-		outStream << "}" << std::endl;
-		outStream.close();
+    void print_tree(int depth=0) {
+        for(int i=0; i<depth; i++)
+            std::cout << "  ";
+        std::cout << type << ":" << value << std::endl; //<< " @line: "<< lineno << endl;
+        for(auto i=children.begin(); i!=children.end(); i++)
+            (*i)->print_tree(depth+1);
+    }
 
-		printf("\nBuilt a parse-tree at %s. Use 'make tree' to generate the pdf version.\n", filename);
-  	}
+    void generate_tree() {
+        std::ofstream outStream;
+        char* filename = "tree.dot";
+        outStream.open(filename);
 
-  	void generate_tree_content(int &count, ofstream *outStream) {
-	  id = count++;
-	  *outStream << "n" << id << " [label=\"" << type << ":" << value << "\"];" << endl;
+        int count = 0;
+        outStream << "digraph {" << std::endl;
+        generate_tree_content(count, &outStream);
+        outStream << "}" << std::endl;
+        outStream.close();
 
-	  for (auto i = children.begin(); i != children.end(); i++)
-	  {
-		  (*i)->generate_tree_content(count, outStream);
-		  *outStream << "n" << id << " -> n" << (*i)->id << endl;
-	  }
-  }
+        printf("\nBuilt a parse-tree at %s. Use 'make tree' to generate the pdf version.\n", filename);
+    }
+
+    void generate_tree_content(int &count, std::ofstream *outStream) {
+        id = count++;
+        *outStream << "n" << id << " [label=\"" << type << ":" << value << "\"];" << std::endl;
+
+        for (auto i = children.begin(); i != children.end(); i++)
+        {
+            (*i)->generate_tree_content(count, outStream);
+            *outStream << "n" << id << " -> n" << (*i)->id << std::endl;
+        }
+    }
 
 };
 

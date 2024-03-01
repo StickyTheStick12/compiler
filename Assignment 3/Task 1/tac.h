@@ -1,8 +1,7 @@
 #ifndef TAC_H
 #define TAC_H
 
-#include "node.h"
-#include <string>
+#include "Node.h"
 
 class Tac {
 protected:
@@ -11,7 +10,7 @@ protected:
     std::string rhs;
     std::string result;
 public:
-    Tac(const std::string& op, const std::string& lhs, const std::string& rhs, const std::string& result);
+    Tac(std::string  op, std::string  lhs, std::string  rhs, std::string  result);
 
     std::string GetOp();
     std::string GetLhs();
@@ -32,94 +31,93 @@ class Expression : public Tac {
 public:
     Expression(const std::string& op, const std::string& lhs, const std::string& rhs, const std::string& result);
 
-    std::string GetStr();
+    std::string GetStr() override;
 };
 
 class UnaryExpression : public Tac {
 public:
-    UnaryExpression(const std::string& op, const std::string& lhs, const std::string& rhs, const std::string& result);
+    UnaryExpression(const std::string& op, const std::string& rhs, const std::string& result);
 
-    std::string GetStr();
+    std::string GetStr() override;
 };
 
 class Copy : public Tac {
 public:
-    Copy(const std::string lhs, const std::string result);
-    std::string GetStr();
+    Copy(const std::string& lhs, const std::string& result);
+    std::string GetStr() override;
 };
 
 class CopyArray : public Tac {
 public:
-    CopyArray(const std::string& lhs, const std::string& result);
+    CopyArray(const std::string& lhs, const std::string& rhs, const std::string& result);
 
-    std::string GetStr();
+    std::string GetStr() override;
 };
 
 class ArrayAccess : public Tac {
 public:
     ArrayAccess(const std::string& lhs, const std::string& idx, const std::string& result);
 
-    std::string GetStr();
+    std::string GetStr() override;
 };
 
 class Jump : public Tac {
 public:
     Jump(const std::string& label);
 
-    std::string GetStr();
+    std::string GetStr() override;
 };
 
 class MethodCall : public Tac {
 public:
     MethodCall(const std::string& function, const std::string& name, const std::string& result);
 
-    std::string GetStr();
+    std::string GetStr() override;
 };
 
 class CondJump : public Tac {
 public:
     CondJump(const std::string& cond, const std::string& label);
 
-    std::string GetStr();
+    std::string GetStr() override;
 };
 
 class New : public Tac {
 public:
     New(const std::string& lhs, const std::string& result);
 
-    std::string GetStr();
+    std::string GetStr() override;
 };
 
 class NewArray : public Tac {
 public:
     NewArray(const std::string& type, const std::string& number, const std::string& result);
 
-    std::string GetStr();
+    std::string GetStr() override;
 };
 
 class Length : public Tac {
 public:
     Length(const std::string& lhs, const std::string& result);
-    string GetStr();
+    std::string GetStr() override;
 };
 
-class Param : public Tac {
+class Parameter : public Tac {
 public:
-    Param(const std::string& result);
-    string GetStr();
+    Parameter(const std::string& result);
+    std::string GetStr() override;
 };
 
 class Return : public Tac {
 public:
-    Return(const std::string& result)
-    string GetStr();
+    Return(const std::string& result);
+    std::string GetStr() override;
 };
 
 class Print : public Tac {
 public:
-    Print(const std::string& result)
-    string GetStr();
+    Print(const std::string& result);
+    std::string GetStr() override;
 };
-
 
 #endif

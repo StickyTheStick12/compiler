@@ -34,7 +34,6 @@ public:
     Method(const std::string& name, const std::string& type);
     void AddParameter(Variable* var);
     Variable* GetParameter(const int idx);
-    Variable* ParamLookup(const std::string& name);
     int GetNumberParameters();
 };
 
@@ -46,7 +45,6 @@ public:
     Class(const std::string& name, const std::string& type);
     void AddMethod(Method* method);
     Method* MethodLookup(const std::string& name);
-    Variable* VarLookup(const std::string& name);
 };
 
 class Scope {
@@ -73,7 +71,7 @@ public:
     Variable* VarLookup(const std::string& key);
     Variable* VarLookupCurScope(const std::string& key);
     void ResetScope();
-    void PrintScope(int& count, ofstream* oStream);
+    void PrintScope(int& count, std::ofstream* oStream);
 };
 
 class SymbolTable {

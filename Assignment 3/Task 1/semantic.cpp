@@ -104,7 +104,7 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         if(lhs != "int[]" && ((lhs == "Q" && t.first != "int[]" && t.second != "int[]") || lhs != "Q"))
         {
             std::cerr << "@error at line " << node->children.front()->lineno <<
-            ". the type of the expression must be an int array but is a " << lhs << std::endl;
+                      ". the type of the expression must be an int array but is a " << lhs << std::endl;
 
             return "void";
         }
@@ -132,7 +132,7 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         std::string lhs = TraverseTreeSemantic(ST, node->children.front());
         if(lhs != "int" && lhs != "bool" && ((lhs == "Q" && t.first != "int" && t.second != "int") || lhs != "Q"))
             std::cerr << "@error at line " << node->children.front()->lineno <<
-                      ". Cannot convert " << lhs << " to an int" << endl;
+                      ". Cannot convert " << lhs << " to an int" << std::endl;
 
         return "void";
     }
@@ -268,7 +268,7 @@ std::string TraverseTreeSemantic(SymbolTable* ST, Node* node)
         if(callerClass == nullptr)
         {
             std::cerr << "@error at line " << node->lineno <<
-                      ". Method " << (*(++node->children.begin()))->value << " is not defined on instance of type " << node->children.front()->value << endl;
+                      ". Method " << (*(++node->children.begin()))->value << " is not defined on instance of type " << node->children.front()->value << std::endl;
             return "-";
         }
 

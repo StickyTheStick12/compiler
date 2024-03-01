@@ -8,7 +8,7 @@
 class BBlock {
 public:
     int blockCounter = 0;
-    int tempCounter = 0;
+    static inline int tempCounter = 0;
     std::string name;
     std::vector<Tac*> tacInstructions;
     Tac* condition;
@@ -17,7 +17,7 @@ public:
 
     BBlock() : trueExit(nullptr), falseExit(nullptr), condition(nullptr), name(GenBlockName()) {}
 
-    std::string GenTempName();
+    static std::string GenTempName();
 
     std::string GenBlockName();
 };
@@ -26,8 +26,8 @@ extern BBlock* currentBlock;
 extern std::vector<BBlock*> methods;
 extern std::vector<std::string> renderedBlocks;
 
-std::string TraverseTreeTac (SymbolTable* ST, Node* node);
-void CreateBlockCfg(BBlock* block, ofstream *oStream);
+std::string TraverseTreeTac(SymbolTable* ST, Node* node);
+void CreateBlockCfg(BBlock* block, std::ofstream *oStream);
 void CreateCfg(BBlock* block);
 
 #endif

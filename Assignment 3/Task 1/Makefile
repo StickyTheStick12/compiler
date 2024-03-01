@@ -1,0 +1,15 @@
+compiler: lex.yy.c parser.tab.o main.cpp
+		g++ -g -w -ocompiler parser.tab.o lex.yy.c main.cpp symbol_table.cpp semantic.cpp -std=c++14
+parser.tab.o: parser.tab.cc
+		g++ -g -w -c parser.tab.cc -std=c++14
+parser.tab.cc: parser.yy
+		bison parser.yy -v
+lex.yy.c: lexer.flex parser.tab.cc
+		flex lexer.flex
+tree:
+		 dot -Tpdf tree.dot -otree.pdf
+st:
+		 dot -Tpdf ST.dot -oST.pdf
+clean:
+		rm -f parser.tab.* lex.yy.c* compiler stack.hh tree.dot tree.pdf
+		rm -R compiler.dSYM

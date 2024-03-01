@@ -1,6 +1,7 @@
 #include "tac.h"
+#include <utility>
 
-Tac::Tac(const std::string& op, const std::string& lhs, const std::string& rhs, const std::string& result) : op(op), lhs(lh), rhs(rhs), result(result) {}
+Tac::Tac(std::string  op, std::string  lhs, std::string  rhs, std::string  result) : op(std::move(op)), lhs(std::move(lhs)), rhs(std::move(rhs)), result(std::move(result)) {}
 
 std::string Tac::GetOp() {
     return op;
@@ -19,29 +20,28 @@ std::string Tac::GetResult() {
 }
 
 void Tac::SetOp(const std::string& op) {
-    op = op;
+    this->op = op;
 }
 
-void Tac::SetLhs(const std::string& op) {
-    op = op;
+void Tac::SetLhs(const std::string& lhs) {
+    this->lhs = lhs;
 }
 
-void Tac::SetRhs(const std::string& op) {
-    op = op;
+void Tac::SetRhs(const std::string& rhs) {
+    this->rhs = rhs;
 }
 
-void Tac::SetResult(const std::string& op) {
-    op = op;
+void Tac::SetResult(const std::string& result) {
+    this->result = result;
 }
 
 std::string Tac::GetStr() {
     return "";
 }
 
-void Tac::dump()
+void Tac::Dump()
 {
-    std::cout << result " := " << lhs << " " << op << " " << rhs << std::endl;
-    fprintf(stdout, "%s := %s %s %s", result, lhs, op, rhs);
+    std::cout << result << " := " << lhs << " " << op << " " << rhs << std::endl;
 }
 
 Expression::Expression(const std::string& op, const std::string& lhs, const std::string& rhs, const std::string& result) : Tac(op, lhs, rhs, result) {}
@@ -110,9 +110,9 @@ std::string Length::GetStr() {
     return result + " := " + op + " " + lhs ;
 }
 
-Param::Param(const std::string& result) : Tac("param", "", "", result) {}
+Parameter::Parameter(const std::string& result) : Tac("param", "", "", result) {}
 
-std::string Param::GetStr() {
+std::string Parameter::GetStr() {
     return op + " " + result;
 }
 
@@ -124,6 +124,6 @@ std::string Return::GetStr() {
 
 Print::Print(const std::string& result) : Tac("print", "", "", result) {}
 
-string Print::GetStr() {
+std::string Print::GetStr() {
     return op + " " + result ;
 }

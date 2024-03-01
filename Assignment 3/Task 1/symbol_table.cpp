@@ -150,20 +150,20 @@ void Scope::ResetScope() {
         childScope->ResetScope();
 }
 
-void Scope::PrintScope(int& num, ofstream* oStream) {
+void Scope::PrintScope(int& num, std::ofstream* oStream) {
 
     *oStream << "n" << num << " [label=\"Symbol table: ("<< scopeName << ")\\n";
 
     for(auto & entry : classEntries)
         *oStream << classEntries[entry.first]->PrintEntry() << "\\n";
 
-     for(auto & entry : methodEntries)
+    for(auto & entry : methodEntries)
         *oStream << methodEntries[entry.first]->PrintEntry() << "\\n";
 
     for(auto & entry : varEntries)
         *oStream << varEntries[entry.first]->PrintEntry() << "\\n";
 
-    *oStream << "\"];" << endl;
+    *oStream << "\"];" << std::endl;
 
     int id = num;
 
@@ -171,7 +171,7 @@ void Scope::PrintScope(int& num, ofstream* oStream) {
     {
         int n = ++num;
         childScope->PrintScope(num, oStream);
-        *oStream << "n" << id << " -> n" << n << endl;
+        *oStream << "n" << id << " -> n" << n << std::endl;
     }
 }
 
@@ -248,8 +248,8 @@ void TraverseTree(Node* node, SymbolTable* ST)
             if(ST->ClassLookup(iter->value) != nullptr)
                 std::cerr << "@error at line " << iter->lineno <<
                           ". A class with name '" << iter->value << "' already exists" << std::endl;
-                //std::cerr << "@error at line " << (iter->children.front()->children.front()->lineno - 1) <<
-                          //". A class with name '" << iter->value << "' already exists" << std::endl;
+            //std::cerr << "@error at line " << (iter->children.front()->children.front()->lineno - 1) <<
+            //". A class with name '" << iter->value << "' already exists" << std::endl;
 
             auto nClass = new Class(iter->value, iter->value);
 
@@ -307,7 +307,7 @@ void TraverseTree(Node* node, SymbolTable* ST)
 
         if (ST->VarLookupCurScope(name->value) != nullptr)
             std::cerr << "@error at line " << node->lineno <<
-                  ". A variable with name '" << name->value << "' already exists" << std::endl;
+                      ". A variable with name '" << name->value << "' already exists" << std::endl;
 
         ST->AddVar(name->value, new Variable(name->value, type->value));
     }

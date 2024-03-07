@@ -11,6 +11,7 @@ std::string BBlock::GenTempName() {
 }
 
 std::string BBlock::GenBlockName() {
+    std::cout << blockCounter << std::endl;
     return "block" + std::to_string(blockCounter++);
 }
 
@@ -318,6 +319,7 @@ std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
 void CreateBlockCfg(BBlock* block, std::ofstream* outStream) {
     *outStream << block->name << " [label=\"" << block->name << "\\n";
     renderedBlocks.push_back(block->name);
+
     for (auto & tacInstruction : block->tacInstructions) {
         *outStream << tacInstruction->GetStr() << "\\n";
     }

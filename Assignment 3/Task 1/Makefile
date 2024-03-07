@@ -1,5 +1,5 @@
 compiler: lex.yy.c parser.tab.o main.cpp
-		g++ -g -w -ocompiler parser.tab.o lex.yy.c main.cpp symbol_table.cpp semantic.cpp -std=c++14
+		g++ -g -w -ocompiler parser.tab.o lex.yy.c main.cpp symbol_table.cpp semantic.cpp cfg.cpp tac.cpp -std=c++14
 parser.tab.o: parser.tab.cc
 		g++ -g -w -c parser.tab.cc -std=c++14
 parser.tab.cc: parser.yy

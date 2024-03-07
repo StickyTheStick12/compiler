@@ -11,7 +11,6 @@ std::string BBlock::GenTempName() {
 }
 
 std::string BBlock::GenBlockName() {
-    std::cout << blockCounter << std::endl;
     return "block" + std::to_string(blockCounter++);
 }
 

@@ -7,7 +7,7 @@
 
 class BBlock {
 public:
-    int blockCounter = 0;
+    static inline int blockCounter = 0;
     static inline int tempCounter = 0;
     std::string name;
     std::vector<Tac*> tacInstructions;

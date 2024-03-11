@@ -1,6 +1,8 @@
 #include "cfg.h"
 
 //TODO. fix block for if statement, (Only if, so not if else)
+// todo. rename blockcounter and tempcounter
+// TODO: why add to the symbol table?
 
 BBlock* currentBlock;
 std::vector<BBlock*> methods;
@@ -92,7 +94,9 @@ std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
     else if (node->type == "Assignment") {
         auto child = node->children.begin();
         std::string name = (*child)->value;
+        //todo name should be result;
         child = std::next(child);
+        //todo rhsName should be rhs;
         std::string rhsName = TraverseTreeTac(ST, *child);
         Tac* instruction = new Copy(rhsName, name);
         currentBlock->tacInstructions.push_back(instruction);

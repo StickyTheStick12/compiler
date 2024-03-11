@@ -56,6 +56,7 @@ std::string UnaryExpression::GetStr() {
     return result + " := " + op + " " + rhs ;
 }
 
+//todo: shouldnt this be rhs?
 Copy::Copy(const std::string& lhs, const std::string& result) : Tac("Copy", lhs, "", result) {}
 
 std::string Copy::GetStr() {

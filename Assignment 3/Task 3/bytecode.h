@@ -15,21 +15,21 @@ class MethodBlock {
 public:
     std::string name;
     std::vector<Instruction*> instructions;
-    void Print(std::ofstream* outSteam);
+    void Print(std::ofstream* outSteam) const;
 };
 
 class BCMethod {
 public:
     std::vector<Variable> variables;
     std::vector<MethodBlock*> methodBlocks;
-    void Print(std::ofstream* outStream);
+    void Print(std::ofstream* outStream) const;
 };
 
 
 class Program {
 public:
     std::map<std::string, BCMethod*> methods;
-    void Print();
+    void Print() const;
 };
 
 #endif

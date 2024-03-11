@@ -1,85 +1,84 @@
 #include "bytecode.h"
 
 void Instruction::Print(std::ofstream* outStream) const {
-    std::string inst_name;
+    std::string instructionName;
     switch(id) {
         case 0:
-            inst_name = "iload";
+            instructionName = "iload";
             break;
         case 1:
-            inst_name = "iconst";
+            instructionName = "iconst";
             break;
         case 2:
-            inst_name = "istore";
+            instructionName = "istore";
             break;
         case 3:
-            inst_name = "iadd";
+            instructionName = "iadd";
             break;
         case 4:
-            inst_name = "isub";
+            instructionName = "isub";
             break;
         case 5:
-            inst_name = "imul";
+            instructionName = "imul";
             break;
         case 6:
-            inst_name = "idiv";
+            instructionName = "idiv";
             break;
         case 7:
-            inst_name = "ilt";
+            instructionName = "ilt";
             break;
         case 8:
-            inst_name = "iand";
+            instructionName = "iand";
             break;
         case 9:
-            inst_name = "ior";
+            instructionName = "ior";
             break;
         case 10:
-            inst_name = "inot";
+            instructionName = "inot";
             break;
         case 11:
-            inst_name = "goto";
+            instructionName = "goto";
             break;
         case 12:
-            inst_name = "iffalse goto";
+            instructionName = "iffalse goto";
             break;
         case 13:
-            inst_name = "invokevirtual";
+            instructionName = "invokevirtual";
             break;
         case 14:
-            inst_name = "ireturn";
+            instructionName = "ireturn";
             break;
         case 15:
-            inst_name = "print";
+            instructionName = "print";
             break;
         case 16:
-            inst_name = "stop";
+            instructionName = "stop";
             break;
     }
-    *outStream << "    " << inst_name << " " << argument << std::endl;
+    *outStream << "    " << instructionName << " " << argument << std::endl;
 }
 
-void MethodBlock::Print(std::ofstream* outStream) {
+void MethodBlock::Print(std::ofstream* outStream) const {
     *outStream << name << ":" << std::endl;
     for (Instruction* i : instructions) {
         i->Print(outStream);
     }
 }
 
-void BCMethod::Print(std::ofstream* outStream) {
+void BCMethod::Print(std::ofstream* outStream) const {
     for (MethodBlock* i : methodBlocks) {
         i->Print(outStream);
     }
 }
 
-void Program::Print()
+void Program::Print() const
 {
     std::ofstream outStream;
     outStream.open("bytecode.bc");
 
-    for(std::pair<std::string, BCMethod*> kvp : methods) {
-        // outStream << kvp.first  << ":" << endl;
-        kvp.second->Print(&outStream);
+    for(std::pair<std::string, BCMethod*> pair : methods) {
+        pair.second->Print(&outStream);
     }
-    std::cout << "Printed Bytecode!" << std::endl;
+    std::cout << "Wrote bytecode to bytecode.bc" << std::endl;
     outStream.close();
 }

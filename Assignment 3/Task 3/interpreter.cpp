@@ -3,7 +3,7 @@
 Activation::Activation(BCMethod* method) {
     this->method = method;
 
-    for(auto methodVar : method->variables)
+    for(auto& methodVar : method->variables)
         variables[methodVar] = 0;
 }
 
@@ -14,6 +14,20 @@ Instruction* Activation::GetNextInstruction() {
 void Activation::Jump(const std::string& block) {
     pc = method->GetPcValue(block);
 }
+
+std::vector<std::string> split_string(std::string input) {
+    std::vector<std::string> res;
+    int str_pos = 0;
+    while (str_pos != std::string::npos) {
+        str_pos = input.find(' ', str_pos);
+        std::string part = input.substr(0, str_pos);
+        input.erase(0, str_pos + 1);
+        if (str_pos == 0) continue;
+        res.push_back(part);
+    }
+    return res;
+}
+
 
 Program* ReadFile(const std::string& filename)
 {
@@ -27,14 +41,16 @@ Program* ReadFile(const std::string& filename)
     {
         if(line == "main:")
         {
+            std::cout << "main" << std::endl;
             currentMethod = new BCMethod();
             currentMethodBLock = new MethodBlock();
             currentMethodBLock->name = "main";
             currentMethod->methodBlocks.push_back(currentMethodBLock);
+            program->methods["main"] = currentMethod;
         }
         else if(line.find('.') != std::string::npos && line.find(':') != std::string::npos) {
             line.pop_back();
-            currentMethodBLock = new BCMethod();
+            currentMethod = new BCMethod();
             currentMethodBLock = new MethodBlock();
             currentMethodBLock->name = line;
             currentMethod->methodBlocks.push_back(currentMethodBLock);
@@ -50,173 +66,148 @@ Program* ReadFile(const std::string& filename)
             Instruction* instruction = new Instruction();
             std::vector<std::string> nLine;
 
-            int pos = 0;
-            std::string token;
-            while ((pos = line.find(' ')) != std::string::npos) {
-                token = line.substr(0, pos);
-                nLine.push_back(token);
-                line.erase(0, pos + 1);
-            }
+            nLine = split_string(line);
+            instruction->id = instructions.at(nLine[0]);
+            if(nLine.size() > 1)
+            {
+                instruction->argument = nLine[1];
 
-            instruction->id = instructions[nLine[0].]
-        }
-    }
-}
-
-
-
-
-
-        } else {
-            inst->id = instructions.at(lineSplit[0]);
-            if (lineSplit.size() > 1) {
-                inst->argument = lineSplit[1];
-                if ((lineSplit[0] == "iload" || lineSplit[0] == "istore") && find(currentMethod->variables.begin(), currentMethod->variables.end(), lineSplit[1]) != currentMethod->variables.end()) {
-                    currentMethod->variables.push_back(lineSplit[1]);
+                if ((nLine[0] == "iload" || nLine[0] == "istore") && find(currentMethod->variables.begin(), currentMethod->variables.end(), nLine[1]) != currentMethod->variables.end()) {
+                    currentMethod->variables.push_back(nLine[1]);
                 }
             }
-            currentMethodBlock->instructions.push_back(inst);
+            currentMethodBLock->instructions.push_back(instruction);
         }
     }
-    return program;
 
+    return program;
 }
 
-void interpret(Program* program) {
-    stack<Activation*> activationStack;
-    stack<int> dataStack;
-    Activation* currentActivation = new Activation(program->methods["main"]);
+
+void Interpret(Program* program)
+{
+    std::stack<Activation*> activationStack;
+    std::stack<int> dataStack;
+    Activation* currentAct = new Activation(program->methods["main"]);
     int instructionId = -1;
-    int v1, v2, v;
-    while(instructionId != STOP) {
-        Instruction* instruction = currentActivation->getNextInstruction();
-        // cout << instruction->id << " " << instruction->argument << endl;
+    int ra;
+    int rb;
+
+    while(instructionId != STOP)
+    {
+        Instruction* instruction = currentAct->GetNextInstruction();
         instructionId = instruction->id;
-        switch(instruction->id) {
+
+        switch (instruction->id) {
             case ILOAD:
-                dataStack.push(currentActivation->variables[instruction->argument]);
+                dataStack.push(currentAct->variables[instruction->argument]);
                 break;
             case ICONST:
                 dataStack.push(stoi(instruction->argument));
                 break;
             case ISTORE:
-                currentActivation->variables[instruction->argument] = dataStack.top();
+                currentAct->variables[instruction->argument] = dataStack.top();
                 dataStack.pop();
                 break;
             case IADD:
-                v1 = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                v2 = dataStack.top();
+                rb = dataStack.top();
                 dataStack.pop();
-                dataStack.push(v1 + v2);
+                dataStack.push(ra + rb);
                 break;
             case ISUB:
-                v1 = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                v2 = dataStack.top();
+                rb = dataStack.top();
                 dataStack.pop();
-                dataStack.push(v2 - v1);
+                dataStack.push(rb - ra);
                 break;
             case IMUL:
-                v1 = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                v2 = dataStack.top();
+                rb = dataStack.top();
                 dataStack.pop();
-                dataStack.push(v2 * v1);
+                dataStack.push(rb * ra);
                 break;
             case IDIV:
-                v1 = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                v2 = dataStack.top();
+                rb = dataStack.top();
                 dataStack.pop();
-                dataStack.push(v2 / v1);
+                dataStack.push(rb / ra);
                 break;
             case ILT:
-                v1 = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                v2 = dataStack.top();
+                rb = dataStack.top();
                 dataStack.pop();
-                dataStack.push(v2 < v1);
+                dataStack.push(rb < ra);
                 break;
             case IEQ:
-                v1 = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                v2 = dataStack.top();
+                rb = dataStack.top();
                 dataStack.pop();
-                dataStack.push(v2 == v1);
+                dataStack.push(rb == ra);
                 break;
             case IAND:
-                v1 = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                v2 = dataStack.top();
+                rb = dataStack.top();
                 dataStack.pop();
-                dataStack.push(v2 * v1 != 0);
+                dataStack.push(ra * rb != 0);
                 break;
             case IOR:
-                v1 = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                v2 = dataStack.top();
+                rb = dataStack.top();
                 dataStack.pop();
-                dataStack.push(v2 + v1 != 0);
+                dataStack.push(ra + rb != 0);
                 break;
             case INOT:
-                v = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                dataStack.push(v == 0);
+                dataStack.push(ra == 0);
                 break;
             case GOTO:
-                currentActivation->jump(instruction->argument);
+                currentAct->Jump(instruction->argument);
                 break;
             case IFFALSE:
-                v = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                if(v == 0)
-                {
-                    currentActivation->jump(instruction->argument);
-                }
+                if(ra == 0)
+                    currentAct->Jump(instruction->argument);
                 break;
-            case INVOKEVIRTUAL:
-            {
-                activationStack.push(currentActivation);
-                BCMethod* callMethod = program->methods[instruction->argument];
-                currentActivation = new Activation(callMethod);
+            case INVOKEVIRTUAL: {
+                activationStack.push(currentAct);
+                BCMethod *callMethod = program->methods[instruction->argument];
+                currentAct = new Activation(callMethod);
                 break;
             }
             case IRETURN:
-                currentActivation = activationStack.top();
+                currentAct = activationStack.top();
                 activationStack.pop();
                 break;
             case PRINT:
-                v = dataStack.top();
+                ra = dataStack.top();
                 dataStack.pop();
-                cout << v << endl;
+                std::cout << ra << std::endl;
                 break;
             case STOP:
                 break;
         }
     }
-
-}
-
-vector<string> split_string(string inp, string del) {
-    vector<string> res;
-    int str_pos = 0;
-    while (str_pos != string::npos) {
-        str_pos = inp.find(del, str_pos);
-        string part = inp.substr(0, str_pos);
-        inp.erase(0, str_pos + 1);
-        if (str_pos == 0) continue;
-        res.push_back(part);
-    }
-    return res;
 }
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        cout << "Too few arguments" << endl;
+        std::cout << "Too few arguments" << std::endl;
         return 0;
     }
-    Program* program = readFile(argv[1]);
-    interpret(program);
+
+    Program* program = ReadFile(argv[1]);
+    std::cout << "interpret" << std::endl;
+    Interpret(program);
     return 0;
 }

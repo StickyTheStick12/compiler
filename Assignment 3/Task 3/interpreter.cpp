@@ -41,7 +41,6 @@ Program* ReadFile(const std::string& filename)
     {
         if(line == "main:")
         {
-            std::cout << "main" << std::endl;
             currentMethod = new BCMethod();
             currentMethodBLock = new MethodBlock();
             currentMethodBLock->name = "main";
@@ -50,6 +49,7 @@ Program* ReadFile(const std::string& filename)
         }
         else if(line.find('.') != std::string::npos && line.find(':') != std::string::npos) {
             line.pop_back();
+            line = line.substr(line.find('.') + 1);
             currentMethod = new BCMethod();
             currentMethodBLock = new MethodBlock();
             currentMethodBLock->name = line;
@@ -178,7 +178,7 @@ void Interpret(Program* program)
                 dataStack.pop();
                 if(ra == 0)
                     currentAct->Jump(instruction->argument);
-                break;
+            break;
             case INVOKEVIRTUAL: {
                 activationStack.push(currentAct);
                 BCMethod *callMethod = program->methods[instruction->argument];
@@ -192,7 +192,6 @@ void Interpret(Program* program)
             case PRINT:
                 ra = dataStack.top();
                 dataStack.pop();
-                std::cout << ra << std::endl;
                 break;
             case STOP:
                 break;
@@ -207,7 +206,6 @@ int main(int argc, char **argv) {
     }
 
     Program* program = ReadFile(argv[1]);
-    std::cout << "interpret" << std::endl;
     Interpret(program);
     return 0;
 }

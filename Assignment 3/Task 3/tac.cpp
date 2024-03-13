@@ -47,17 +47,19 @@ void Expression::GenerateCode(MethodBlock *method) {
     if (op == "ADD")
         opInstruction->id = 3; //iadd
     else if (op == "SUB")
-         opInstruction->id = 4; //isub
+        opInstruction->id = 4; //isub
     else if (op == "MUL")
         opInstruction->id = 5; //imul
     else if (op == "DIV")
         opInstruction->id = 6;  //ilt
     else if (op == "LT" || op == "GT")
-        opInstruction->id = 7; //ilt
+        opInstruction->id = 7;
+    else if (op == "EQ")
+            opInstruction->id = 8;
     else if (op == "AND")
-        opInstruction->id = 8; //iand
+        opInstruction->id = 9; //iand
     else if (op == "OR")
-        opInstruction->id = 9; //ior
+        opInstruction->id = 10; //ior
 
     storeInstruction->id = 2; //istore
     storeInstruction->argument = result;
@@ -92,7 +94,7 @@ void UnaryExpression::GenerateCode(MethodBlock *method)
 
     rhsInstruction->argument = rhs;
 
-    opInstruction->id = 10;
+    opInstruction->id = 11;
     storeInstruction->id = 2;
     storeInstruction->argument = result;
     method->instructions.push_back(rhsInstruction);
@@ -152,7 +154,7 @@ std::string MethodCall::GetStr() {
 void MethodCall::GenerateCode(MethodBlock *method) {
     Instruction* callInstruction = new Instruction();
     Instruction* retInstruction = new Instruction();
-    callInstruction->id = 13;
+    callInstruction->id = 14;
     callInstruction->argument = lhs;
     retInstruction->id = 2;
     retInstruction->argument = result;
@@ -168,7 +170,7 @@ std::string Jump::GetStr() {
 
 void Jump::GenerateCode(MethodBlock *method) {
     Instruction* gotoInstruction = new Instruction();
-    gotoInstruction->id = 11;
+    gotoInstruction->id = 12;
     gotoInstruction->argument = result;
     method->instructions.push_back(gotoInstruction);
 }
@@ -194,7 +196,7 @@ void CondJump::GenerateCode(MethodBlock *method) {
     }
 
     lhsInstruction->argument = lhs;
-    jumpInstruction->id = 12;
+    jumpInstruction->id = 13;
     jumpInstruction->argument = result;
     method->instructions.push_back(lhsInstruction);
     method->instructions.push_back(jumpInstruction);
@@ -247,6 +249,19 @@ void Parameter::GenerateCode(MethodBlock *method) {
     method->instructions.push_back(parameterInstruction);
 }
 
+MethodParameter::MethodParameter(const std::string &result) : Tac("MethodParameter", "", "", result){}
+
+std::string MethodParameter::GetStr() {
+    return op + " " + result;
+}
+
+void MethodParameter::GenerateCode(MethodBlock *method) {
+    Instruction* parameterInsttruction = new Instruction();
+    parameterInsttruction->id = 2;
+    parameterInsttruction->argument = result;
+    method->instructions.push_back(parameterInsttruction);
+}
+
 Return::Return(const std::string& result) : Tac("return", "", "", result) {}
 
 std::string Return::GetStr() {
@@ -268,7 +283,7 @@ void Return::GenerateCode(MethodBlock *method) {
     }
 
     retValueInstruction->argument = result;
-    retInstruction->id = 14;
+    retInstruction->id = 15;
     method->instructions.push_back(retValueInstruction);
     method->instructions.push_back(retInstruction);
 }
@@ -295,7 +310,7 @@ void Print::GenerateCode(MethodBlock *method) {
 
     resultInstruction->argument = result;
 
-    opInstruction->id = 15;
+    opInstruction->id = 16;
 
     method->instructions.push_back(resultInstruction);
     method->instructions.push_back(opInstruction);

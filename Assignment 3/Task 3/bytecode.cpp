@@ -28,30 +28,33 @@ void Instruction::Print(std::ofstream* outStream) const {
             instructionName = "ilt";
             break;
         case 8:
-            instructionName = "iand";
+            instructionName = "ieq";
             break;
         case 9:
-            instructionName = "ior";
+            instructionName = "iand";
             break;
         case 10:
-            instructionName = "inot";
+            instructionName = "ior";
             break;
         case 11:
-            instructionName = "goto";
+            instructionName = "inot";
             break;
         case 12:
-            instructionName = "iffalse goto";
+            instructionName = "goto";
             break;
         case 13:
-            instructionName = "invokevirtual";
+            instructionName = "iffalse";
             break;
         case 14:
-            instructionName = "ireturn";
+            instructionName = "invokevirtual";
             break;
         case 15:
-            instructionName = "print";
+            instructionName = "ireturn";
             break;
         case 16:
+            instructionName = "print";
+            break;
+        case 17:
             instructionName = "stop";
             break;
     }
@@ -69,6 +72,28 @@ void BCMethod::Print(std::ofstream* outStream) const {
     for (MethodBlock* i : methodBlocks) {
         i->Print(outStream);
     }
+}
+
+Instruction* BCMethod::GetInstruction(int pc) {
+    int i = 0;
+    MethodBlock* currentBlock;
+    while (pc >= 0) {
+        currentBlock = methodBlocks[i++];
+        pc -= currentBlock->instructions.size();
+    }
+    return currentBlock->instructions[currentBlock->instructions.size() + pc];
+}
+
+int BCMethod::GetPcValue(const std::string& block) {
+    int i = 0;
+    int pc = 0;
+    MethodBlock* currentBlock = methodBlocks[i++];
+    while (currentBlock->name != block){
+        pc += currentBlock->instructions.size();
+        currentBlock = methodBlocks[i++];
+
+    }
+    return pc;
 }
 
 void Program::Print() const

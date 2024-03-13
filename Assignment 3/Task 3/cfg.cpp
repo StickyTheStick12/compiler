@@ -1,8 +1,6 @@
 #include "cfg.h"
 #include "symbol_table.h"
 
-//TODO. fix block for if statement, (Only if, so not if else)
-
 BBlock* currentBlock;
 std::vector<BBlock*> methods;
 std::vector<std::string> renderedBlocks;
@@ -46,7 +44,7 @@ void BBlock::GenerateByteCode(Program *program) {
     }
 
     Instruction* stopInstruction = new Instruction();
-    stopInstruction->id = 16;
+    stopInstruction->id = 17;
     program->methods["main"]->methodBlocks.back()->instructions.push_back(stopInstruction);
 }
 
@@ -72,6 +70,14 @@ std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
         ST->ExitScope();
         return node->value;
     }
+    else if (node->type == "Method parameters") {
+        for (auto i = node->children.rbegin(); i != node->children.rend(); ++i) {
+            std::string name = (*i)->children.back()->value;
+            Tac* in = new MethodParameter(name);
+            currentBlock->tacInstructions.push_back(in);
+        }
+        return "";
+    }
     if (node->type == "Method body") {
         std::string name;
         for(auto & child : node->children)
@@ -83,6 +89,34 @@ std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
     }
     else if (node->type == "Empty statement")
         return "";
+    else if (node->type == "If statement")
+    {
+        BBlock* trueBlock = new BBlock();
+        BBlock* joinBlock = new BBlock();
+
+        currentBlock->trueExit = trueBlock;
+        currentBlock->falseExit = joinBlock;
+
+        Tac* jump = new Jump(joinBlock->name);
+
+        auto child = node->children.begin();
+        std::string condName = TraverseTreeTac(ST, *child);
+        Tac* condition = new CondJump(condName, joinBlock->name);
+        currentBlock->tacInstructions.push_back(condition);
+        currentBlock->condition = condition;
+        Tac* jumpTrue = new Jump(trueBlock->name);
+        currentBlock->tacInstructions.push_back(jumpTrue);
+
+        child = std::next(child);
+        currentBlock = trueBlock;
+        TraverseTreeTac(ST, *child);
+        currentBlock->tacInstructions.push_back(jump);
+        currentBlock->trueExit = joinBlock;
+
+        currentBlock = joinBlock;
+
+        return "";
+    }
     else if (node->type == "If else") {
         BBlock* trueBlock = new BBlock();
         BBlock* falseBlock = new BBlock();
@@ -148,8 +182,7 @@ std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
         return "";
     }
     else if (node->type == "Print") {
-        Node* child = node->children.front();
-        std::string name = TraverseTreeTac(ST, child);
+        std::string name = TraverseTreeTac(ST, node->children.front());
         Tac* instruction = new Print(name);
         currentBlock->tacInstructions.push_back(instruction);
         return "";
@@ -235,9 +268,6 @@ std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
         return name;
     }
     else if (node->type == "Sub expression") {
-
-        std::cout << "Yst" << std::endl;
-
         std::string name = BBlock::GenTempName();
         ST->AddVar(name, new Variable(name, "int"));
         auto child = node->children.begin();
@@ -322,17 +352,16 @@ std::string TraverseTreeTac(SymbolTable* ST, Node* node) {
         ST->AddVar(name, new Variable(name, ""));
         auto child = node->children.begin();
         std::string caller = TraverseTreeTac(ST, *child);
-        Tac* callerTac = new Parameter(caller);
-        currentBlock->tacInstructions.push_back(callerTac);
+
         child = std::next(child);
-        std::string methodName = (*child)->value;
+        std::string methodName = ST->MethodLookup(caller)->GetId() + "." + (*child)->value;
         int length = 1;
         child = std::next(child);
         if (child != node->children.end()) {
             TraverseTreeTac(ST, *child);
             length = (*child)->children.size() + 1;
         }
-        Tac* instruction = new MethodCall(methodName,std::to_string(length),name);
+        Tac* instruction = new MethodCall(methodName, std::to_string(length), name);
         currentBlock->tacInstructions.push_back(instruction);
         return name;
     }
@@ -403,7 +432,7 @@ void CreateBlockCfg(BBlock* block, std::ofstream* outStream) {
     }
 }
 
-void CreateCfg(BBlock* block) {
+void CreateCfg() {
     std::ofstream outStream;
     outStream.open("cfg.dot");
 

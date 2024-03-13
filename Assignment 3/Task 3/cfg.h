@@ -32,6 +32,6 @@ extern std::vector<std::string> renderedBlocks;
 
 std::string TraverseTreeTac(SymbolTable* ST, Node* node);
 void CreateBlockCfg(BBlock* block, std::ofstream *oStream);
-void CreateCfg(BBlock* block);
+void CreateCfg();
 
 #endif
